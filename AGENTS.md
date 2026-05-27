@@ -2,8 +2,8 @@
 
 ## Project Structure & Module Organization
 This repository has two top-level apps:
-- `backend-server/`: Spring Boot 4 backend (`src/main/java`, `src/main/resources`, `src/test/java`).
-- `frontend-client/`: Vue 3 + TypeScript + Vite client (`src/`, `public/`).
+- `backend-server/`: Spring Boot 4 backend + Maven build system (`src/main/java`, `src/main/resources`, `src/test/java`).
+- `frontend-client/`: Vue 3 + TypeScript + Vite client + Pnpm build system (`src/`, `public/`).
 
 Keep backend code under `minecraft.milkwind.manager` and group related classes by feature. Keep UI components in `frontend-client/src/components/` and shared assets in `frontend-client/src/assets/`.
 
@@ -11,10 +11,7 @@ Keep backend code under `minecraft.milkwind.manager` and group related classes b
 Run commands from the matching subproject directory.
 - `./mvnw test` in `backend-server/`: runs the Spring Boot test suite.
 - `./mvnw spring-boot:run` in `backend-server/`: starts the API locally.
-- `pnpm install` in `frontend-client/`: installs frontend dependencies.
-- `pnpm dev` in `frontend-client/`: starts the Vite dev server.
 - `pnpm build` in `frontend-client/`: type-checks and creates a production build.
-- `pnpm preview` in `frontend-client/`: serves the production build locally.
 
 ## Coding Style & Naming Conventions
 Use 4-space indentation in Java and the existing project formatter defaults in Vue/TypeScript files. Prefer descriptive package names, PascalCase for Java classes and Vue components, and camelCase for methods, variables, and composables. Keep filenames aligned with exported types, such as `ServerConfig.java` or `ServerStatus.vue`.
