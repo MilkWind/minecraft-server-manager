@@ -170,7 +170,11 @@ The system does not target heavy writes for logs, telemetry, or analytics storag
 
 ## 11. Server Integration Model
 
-Each Minecraft server is a `.jar` process wrapped by a `.bat` script for operational convenience.
+Each Minecraft server process is started directly using its server `.jar` file.
+
+When adding a managed server, the manager specifies a **server root directory** that contains the server `.jar`, configuration files, and world data. The backend reads the directory to discover the `.jar` and manage the server process.
+
+Managers can configure **JVM parameters** (such as `-Xmx`, `-Xms` for memory allocation) through the UI for each server. These parameters are stored as server metadata and applied when the backend launches the `.jar` process.
 
 The manager system integrates with the server process by:
 
@@ -180,7 +184,7 @@ The manager system integrates with the server process by:
 Custom command safety rule:
 
 - Custom commands only target Minecraft server console input
-- Custom commands must not execute shell commands, `.bat` commands, or OS-level commands
+- Custom commands must not execute shell commands or OS-level commands
 
 This keeps custom commands within the Minecraft server command surface.
 
@@ -252,6 +256,8 @@ Polling frequency should be conservative to avoid unnecessary load.
 - Restart server after asset state changes
 - Create server-specific custom commands
 - Execute server-specific custom commands
+- Configure JVM parameters (memory allocation, etc.) for each server
+- Add a new managed server by specifying its server root directory
 
 ## 15. Custom Command Model
 

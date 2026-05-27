@@ -1,3 +1,39 @@
 spring:
   application:
     name: backend-server
+  datasource:
+    url: jdbc:sqlite:./data/minecraft-manager.db
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+app:
+  auth:
+    session-ttl-hours: 8
+    bootstrap-manager:
+      username: admin
+      display-name: 管理员
+      password: admin123456
+      totp-code: 123456
+  servers:
+    poll-interval-seconds: 8
+    list-refresh-interval-seconds: 15
+    entries:
+      - id: survival
+        display-name: 生存服
+        root-directory: D:/minecraft/servers/survival
+        jvm-arguments: -Xms2G -Xmx4G
+        public-address: survival.local:25565
+        game-version: 1.21.1
+      - id: creative
+        display-name: 创造服
+        root-directory: D:/minecraft/servers/creative
+        jvm-arguments: -Xms2G -Xmx3G
+        public-address: creative.local:25566
+        game-version: 1.21.1
