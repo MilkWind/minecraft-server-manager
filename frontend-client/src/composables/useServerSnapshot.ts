@@ -1,322 +1,214 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { api } from '../lib/api'
-import { useSession } from './useSession'
+import { computed, ref, type MaybeRefOrGetter, toValue } from 'vue';
+import { apiRequest } from '@/lib/api';
 import type {
   AssetActionRequest,
+  CreateManagedServerRequest,
+  CustomCommand,
   CustomCommandUpsertRequest,
   LogEntry,
   PlayerActionRequest,
   SendMessageRequest,
   ServerSnapshot,
   UpdateServerConfigRequest,
-} from '../types/api'
+} from '@/types/api';
 
-const POLL_INTERVAL_MS = 8000
+export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, managerViewSource: MaybeRefOrGetter<boolean>) {
+  const snapshot = ref<ServerSnapshot | null>(null);
+  const logs = ref<LogEntry[]>([]);
+  const loading = ref(false);
+  const busy = ref(false);
+  const pollTimer = ref<number | null>(null);
 
-export function useServerSnapshot(serverId: () => string, isManagerView: () => boolean) {
-  const snapshot = ref<ServerSnapshot | null>(null)
-  const logs = ref<LogEntry[]>([])
-  const loading = ref(false)
-  const actionLoading = ref(false)
-  const error = ref('')
-  const actionMessage = ref('')
-  const { session } = useSession()
+  const onlinePlayers = computed(() => snapshot.value?.onlinePlayers ?? []);
+  const mods = computed(() => snapshot.value?.mods ?? []);
+  const datapacks = computed(() => snapshot.value?.datapacks ?? []);
+  const resourcePacks = computed(() => snapshot.value?.resourcePacks ?? []);
+  const chatMessages = computed(() => snapshot.value?.chatMessages ?? []);
+  const customCommands = computed<CustomCommand[]>(() => snapshot.value?.customCommands ?? []);
 
-  let pollHandle: number | null = null
-
-  const canManage = computed(() => isManagerView() && session.value != null)
+  const resolvedServerId = () => toValue(serverIdSource);
+  const resolvedManagerView = () => toValue(managerViewSource);
+  const basePath = () =>
+    resolvedManagerView()
+      ? `/api/manager/servers/${resolvedServerId()}`
+      : `/api/public/servers/${resolvedServerId()}`;
 
   async function loadSnapshot() {
-    loading.value = true
-    error.value = ''
-
+    loading.value = true;
     try {
-      snapshot.value = canManage.value && session.value != null
-        ? await api.getManagerSnapshot(serverId(), session.value.token)
-        : await api.getVisitorSnapshot(serverId())
-
-      if (canManage.value && session.value != null) {
-        logs.value = await api.getManagerLogs(serverId(), session.value.token)
-      } else {
-        logs.value = snapshot.value.chatMessages
-      }
-    } catch (loadError) {
-      error.value = loadError instanceof Error ? loadError.message : '服务器状态加载失败'
+      snapshot.value = await apiRequest<ServerSnapshot>(`${basePath()}/snapshot`);
+      return snapshot.value;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
-  async function runPowerAction(action: 'start' | 'stop' | 'restart') {
-    if (session.value == null) {
-      return
+  async function loadLogs() {
+    if (!resolvedManagerView()) {
+      logs.value = [];
+      return [];
     }
 
-    actionLoading.value = true
-    actionMessage.value = ''
+    logs.value = await apiRequest<LogEntry[]>(`${basePath()}/logs`);
+    return logs.value;
+  }
 
-    try {
-      const result = await api.runPowerAction(serverId(), action, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '操作失败'
-    } finally {
-      actionLoading.value = false
+  async function refreshAll() {
+    await loadSnapshot();
+    if (resolvedManagerView()) {
+      await loadLogs();
     }
   }
 
-  async function executeCommand(command: string) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.executeCommand(serverId(), command, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '命令发送失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function updateServerConfig(request: UpdateServerConfigRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.updateServerConfig(serverId(), request, session.value.token)
-      actionMessage.value = `已更新 ${result.displayName} 的配置`
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '配置更新失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function createCustomCommand(request: CustomCommandUpsertRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      await api.createCustomCommand(serverId(), request, session.value.token)
-      actionMessage.value = '已创建快捷命令'
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '快捷命令创建失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function updateCustomCommand(commandId: string, request: CustomCommandUpsertRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      await api.updateCustomCommand(serverId(), commandId, request, session.value.token)
-      actionMessage.value = '已更新快捷命令'
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '快捷命令更新失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function deleteCustomCommand(commandId: string) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      await api.deleteCustomCommand(serverId(), commandId, session.value.token)
-      actionMessage.value = '已删除快捷命令'
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '快捷命令删除失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function opPlayer(request: PlayerActionRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.opPlayer(serverId(), request, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : 'OP 操作失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function deopPlayer(request: PlayerActionRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.deopPlayer(serverId(), request, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '取消 OP 失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function banPlayer(request: PlayerActionRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.banPlayer(serverId(), request, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '封禁操作失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function sendMessage(request: SendMessageRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.sendMessage(serverId(), request, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '消息发送失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function suspendAsset(request: AssetActionRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.suspendAsset(serverId(), request, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '资源停用失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  async function resumeAsset(request: AssetActionRequest) {
-    if (session.value == null) {
-      return
-    }
-
-    actionLoading.value = true
-    actionMessage.value = ''
-
-    try {
-      const result = await api.resumeAsset(serverId(), request, session.value.token)
-      actionMessage.value = result.message
-      await loadSnapshot()
-    } catch (actionError) {
-      actionMessage.value = actionError instanceof Error ? actionError.message : '资源恢复失败'
-    } finally {
-      actionLoading.value = false
-    }
-  }
-
-  function startPolling() {
-    stopPolling()
-    pollHandle = window.setInterval(() => {
-      void loadSnapshot()
-    }, POLL_INTERVAL_MS)
+  function startPolling(intervalMs = 8000) {
+    stopPolling();
+    void refreshAll();
+    pollTimer.value = window.setInterval(() => {
+      void refreshAll();
+    }, intervalMs);
   }
 
   function stopPolling() {
-    if (pollHandle != null) {
-      window.clearInterval(pollHandle)
-      pollHandle = null
+    if (pollTimer.value !== null) {
+      window.clearInterval(pollTimer.value);
+      pollTimer.value = null;
     }
   }
 
-  watch([() => serverId(), () => isManagerView(), () => session.value?.token], () => {
-    void loadSnapshot()
-    startPolling()
-  }, { immediate: true })
+  async function runBusyAction<T>(action: () => Promise<T>) {
+    busy.value = true;
+    try {
+      const result = await action();
+      await refreshAll();
+      return result;
+    } finally {
+      busy.value = false;
+    }
+  }
 
-  onMounted(startPolling)
-  onBeforeUnmount(stopPolling)
+  function power(action: 'start' | 'stop' | 'restart') {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/power/${action}`, {
+        method: 'POST',
+      }),
+    );
+  }
+
+  function executeConsoleCommand(command: string) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/console`, {
+        method: 'POST',
+        body: JSON.stringify({ command }),
+      }),
+    );
+  }
+
+  function updateServerConfig(request: UpdateServerConfigRequest) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/config`, {
+        method: 'PUT',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function createManagedServer(request: CreateManagedServerRequest) {
+    return runBusyAction(() =>
+      apiRequest('/api/manager/servers', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function createCustomCommand(request: CustomCommandUpsertRequest) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/commands`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function updateCustomCommand(commandId: string, request: CustomCommandUpsertRequest) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/commands/${commandId}`, {
+        method: 'PUT',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function deleteCustomCommand(commandId: string) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/commands/${commandId}`, {
+        method: 'DELETE',
+      }),
+    );
+  }
+
+  function runPlayerAction(action: 'op' | 'deop' | 'ban', request: PlayerActionRequest) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/players/${action}`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function sendMessage(request: SendMessageRequest) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/messages`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function suspendAsset(request: AssetActionRequest) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/assets/suspend`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function resumeAsset(request: AssetActionRequest) {
+    return runBusyAction(() =>
+      apiRequest(`${basePath()}/assets/resume`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
 
   return {
     snapshot,
     logs,
     loading,
-    actionLoading,
-    error,
-    actionMessage,
-    canManage,
+    busy,
+    onlinePlayers,
+    mods,
+    datapacks,
+    resourcePacks,
+    chatMessages,
+    customCommands,
     loadSnapshot,
-    runPowerAction,
-    executeCommand,
+    loadLogs,
+    refreshAll,
+    startPolling,
+    stopPolling,
+    power,
+    executeConsoleCommand,
     updateServerConfig,
+    createManagedServer,
     createCustomCommand,
     updateCustomCommand,
     deleteCustomCommand,
-    opPlayer,
-    deopPlayer,
-    banPlayer,
+    runPlayerAction,
     sendMessage,
     suspendAsset,
     resumeAsset,
-  }
+  };
 }

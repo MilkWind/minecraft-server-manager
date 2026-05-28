@@ -20,7 +20,7 @@ app:
       username: admin
       display-name: 管理员
       password: admin123456
-      totp-code: 123456
+      totp-secret: JBSWY3DPEHPK3PXP
   servers:
     poll-interval-seconds: 8
     list-refresh-interval-seconds: 15

@@ -15,6 +15,7 @@ public record ServerSnapshotDto(
         List<ManagedAssetDto> resourcePacks,
         List<LogEntryDto> chatMessages,
         ServerMetricsDto metrics,
+        boolean restartRecommended,
         String rootDirectory,
         String jvmArguments,
         List<CustomCommandDto> customCommands

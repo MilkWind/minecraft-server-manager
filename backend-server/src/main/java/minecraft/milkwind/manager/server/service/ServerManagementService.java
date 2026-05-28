@@ -20,6 +20,7 @@ import minecraft.milkwind.manager.server.entity.ServerConfigEntity;
 import minecraft.milkwind.manager.server.mapper.CustomCommandMapper;
 import minecraft.milkwind.manager.server.mapper.ServerConfigMapper;
 import minecraft.milkwind.manager.server.runtime.ServerProcessService;
+import minecraft.milkwind.manager.server.runtime.ServerRuntimeRegistry;
 import minecraft.milkwind.manager.server.runtime.ServerRuntimeState;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class ServerManagementService {
     private final CustomCommandMapper customCommandMapper;
     private final ServerCatalogService serverCatalogService;
     private final ServerProcessService serverProcessService;
+    private final ServerRuntimeRegistry serverRuntimeRegistry;
     private final ServerAssetService serverAssetService;
 
     public ServerManagementService(
@@ -41,12 +43,14 @@ public class ServerManagementService {
             CustomCommandMapper customCommandMapper,
             ServerCatalogService serverCatalogService,
             ServerProcessService serverProcessService,
+            ServerRuntimeRegistry serverRuntimeRegistry,
             ServerAssetService serverAssetService
     ) {
         this.serverConfigMapper = serverConfigMapper;
         this.customCommandMapper = customCommandMapper;
         this.serverCatalogService = serverCatalogService;
         this.serverProcessService = serverProcessService;
+        this.serverRuntimeRegistry = serverRuntimeRegistry;
         this.serverAssetService = serverAssetService;
     }
 
@@ -151,6 +155,7 @@ public class ServerManagementService {
     public AssetActionResultDto suspendAsset(String serverId, AssetActionRequest request) {
         ServerConfigEntity config = requireServerConfig(serverId);
         AssetActionResultDto result = serverAssetService.suspendAsset(config, requireText(request.assetId(), "asset_id"));
+        markRestartRecommended(serverId, config.getStatus());
         serverCatalogService.refresh();
         return result;
     }
@@ -158,6 +163,7 @@ public class ServerManagementService {
     public AssetActionResultDto resumeAsset(String serverId, AssetActionRequest request) {
         ServerConfigEntity config = requireServerConfig(serverId);
         AssetActionResultDto result = serverAssetService.resumeAsset(config, requireText(request.assetId(), "asset_id"));
+        markRestartRecommended(serverId, config.getStatus());
         serverCatalogService.refresh();
         return result;
     }
@@ -246,6 +252,11 @@ public class ServerManagementService {
         ServerConfigEntity config = requireServerConfig(serverId);
         ServerRuntimeState runtime = serverProcessService.snapshotRuntime(config);
         serverProcessService.sendCommand(runtime, command);
+    }
+
+    private void markRestartRecommended(String serverId, String status) {
+        ServerRuntimeState runtime = serverRuntimeRegistry.getOrCreate(serverId, status);
+        runtime.setRestartRecommended(true);
     }
 
     private CustomCommandDto toDto(CustomCommandEntity entity) {

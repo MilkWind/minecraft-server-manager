@@ -9,149 +9,136 @@ import minecraft.milkwind.manager.auth.mapper.ManagerSessionMapper;
 import minecraft.milkwind.manager.auth.mapper.ManagerUserMapper;
 import minecraft.milkwind.manager.auth.model.ManagerSession;
 import minecraft.milkwind.manager.common.exception.ApiException;
-import minecraft.milkwind.manager.security.ManagerPrincipal;
+import minecraft.milkwind.manager.common.time.TimeSupport;
+import minecraft.milkwind.manager.config.AppProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.Collection;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AuthService {
 
-    private static final long SESSION_TTL_SECONDS = 8L * 60L * 60L;
-
     private final ManagerUserMapper managerUserMapper;
     private final ManagerSessionMapper managerSessionMapper;
     private final PasswordEncoder passwordEncoder;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final AppProperties appProperties;
+    private final TotpService totpService;
 
     public AuthService(
             ManagerUserMapper managerUserMapper,
             ManagerSessionMapper managerSessionMapper,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AppProperties appProperties,
+            TotpService totpService
     ) {
         this.managerUserMapper = managerUserMapper;
         this.managerSessionMapper = managerSessionMapper;
         this.passwordEncoder = passwordEncoder;
+        this.appProperties = appProperties;
+        this.totpService = totpService;
     }
 
-    @Transactional
-    public AuthSessionDto login(LoginRequest request, Collection<String> accessibleServerIds) {
-        String username = normalize(request.username());
-        String password = request.password();
-        String totpCode = normalize(request.totpCode());
+    public AuthSessionDto login(LoginRequest request, List<String> allowedServerIds) {
+        String username = requireText(request.username(), "username");
+        String password = requireText(request.password(), "password");
+        String totpCode = requireText(request.totpCode(), "totp_code");
+        String targetServerId = requireText(request.serverId(), "server_id");
+
+        if (!allowedServerIds.contains(targetServerId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "server_not_allowed", "The selected server is not available");
+        }
 
         ManagerUserEntity user = managerUserMapper.selectOne(
                 new LambdaQueryWrapper<ManagerUserEntity>().eq(ManagerUserEntity::getUsername, username)
         );
-
-        if (user == null
-                || !Boolean.TRUE.equals(user.getActive())
-                || password == null
-                || !passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "auth_failed", "Username or password is incorrect");
+        if (user == null || Boolean.FALSE.equals(user.getActive())) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_credentials", "Invalid manager credentials");
         }
 
-        if (!user.getTotpCode().equals(totpCode)) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_totp", "Two-factor verification code is incorrect");
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_credentials", "Invalid manager credentials");
         }
 
-        managerSessionMapper.delete(
-                new LambdaQueryWrapper<ManagerSessionEntity>().eq(ManagerSessionEntity::getUsername, username)
-        );
+        if (!totpService.verify(user.getTotpCode(), totpCode)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_totp", "Invalid verification code");
+        }
 
+        revokeExistingSessions(username);
+
+        String token = UUID.randomUUID().toString();
         Instant now = Instant.now();
-        Instant expiresAt = now.plusSeconds(SESSION_TTL_SECONDS);
-        String token = issueToken();
+        Instant expiresAt = now.plus(appProperties.getAuth().getSessionTtlHours(), ChronoUnit.HOURS);
 
         ManagerSessionEntity entity = new ManagerSessionEntity();
         entity.setToken(token);
-        entity.setUsername(user.getUsername());
+        entity.setUsername(username);
         entity.setDisplayName(user.getDisplayName());
-        entity.setCreatedAt(now.toString());
-        entity.setLastSeenAt(now.toString());
+        entity.setCreatedAt(TimeSupport.nowIso());
+        entity.setLastSeenAt(TimeSupport.nowIso());
         entity.setExpiresAt(expiresAt.toString());
         managerSessionMapper.insert(entity);
 
-        return toSessionDto(
-                new ManagerSession(token, user.getUsername(), user.getDisplayName(), now, now, expiresAt),
-                accessibleServerIds
+        return new AuthSessionDto(
+                token,
+                user.getUsername(),
+                user.getDisplayName(),
+                expiresAt,
+                allowedServerIds
         );
     }
 
-    public ManagerPrincipal authenticate(String token) {
-        if (token == null || token.isBlank()) {
-            return null;
+    public AuthSessionDto currentSession(ManagerSession principal, List<String> allowedServerIds) {
+        if (principal == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "unauthenticated", "Manager session is required");
         }
 
-        ManagerSessionEntity entity = managerSessionMapper.selectById(token);
-        if (entity == null) {
-            return null;
-        }
-
-        Instant now = Instant.now();
-        if (Instant.parse(entity.getExpiresAt()).isBefore(now)) {
-            managerSessionMapper.deleteById(token);
-            return null;
-        }
-
-        entity.setLastSeenAt(now.toString());
-        managerSessionMapper.updateById(entity);
-
-        return new ManagerPrincipal(entity.getUsername(), entity.getDisplayName(), entity.getToken());
-    }
-
-    public AuthSessionDto currentSession(ManagerPrincipal principal, Collection<String> accessibleServerIds) {
         ManagerSessionEntity entity = managerSessionMapper.selectById(principal.token());
         if (entity == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "session_missing", "Current session is no longer valid");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "session_expired", "Manager session has expired");
         }
 
-        return toSessionDto(
-                new ManagerSession(
-                        entity.getToken(),
-                        entity.getUsername(),
-                        entity.getDisplayName(),
-                        Instant.parse(entity.getCreatedAt()),
-                        Instant.parse(entity.getLastSeenAt()),
-                        Instant.parse(entity.getExpiresAt())
-                ),
-                accessibleServerIds
+        Instant expiresAt = Instant.parse(entity.getExpiresAt());
+        if (expiresAt.isBefore(Instant.now())) {
+            managerSessionMapper.deleteById(entity.getToken());
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "session_expired", "Manager session has expired");
+        }
+
+        entity.setLastSeenAt(TimeSupport.nowIso());
+        managerSessionMapper.updateById(entity);
+
+        return new AuthSessionDto(
+                entity.getToken(),
+                entity.getUsername(),
+                entity.getDisplayName(),
+                expiresAt,
+                allowedServerIds
         );
     }
 
-    public void logout(String token) {
-        if (token == null || token.isBlank()) {
+    public void logout(ManagerSession principal) {
+        if (principal == null) {
             return;
         }
 
-        managerSessionMapper.deleteById(token);
+        managerSessionMapper.deleteById(principal.token());
     }
 
-    private AuthSessionDto toSessionDto(ManagerSession session, Collection<String> accessibleServerIds) {
-        return new AuthSessionDto(
-                session.token(),
-                session.username(),
-                session.displayName(),
-                session.createdAt(),
-                session.expiresAt(),
-                List.copyOf(accessibleServerIds)
+    private void revokeExistingSessions(String username) {
+        managerSessionMapper.delete(
+                new LambdaQueryWrapper<ManagerSessionEntity>().eq(ManagerSessionEntity::getUsername, username)
         );
     }
 
-    private String issueToken() {
-        byte[] buffer = new byte[32];
-        secureRandom.nextBytes(buffer);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(buffer);
-    }
-
-    private String normalize(String value) {
-        return value == null ? "" : value.trim();
+    private String requireText(String value, String field) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_" + field, "Required field is blank: " + field);
+        }
+        return normalized;
     }
 }

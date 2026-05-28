@@ -1,148 +1,206 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Button, Card, Loading } from 'animal-island-vue'
-import { useRoute, useRouter } from 'vue-router'
-import AppShell from '../components/AppShell.vue'
-import LoginModal from '../components/LoginModal.vue'
-import ManagerControlPanel from '../components/ManagerControlPanel.vue'
-import ServerOverview from '../components/ServerOverview.vue'
-import { useServerDirectory } from '../composables/useServerDirectory'
-import { useServerSnapshot } from '../composables/useServerSnapshot'
-import { useSession } from '../composables/useSession'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import AppShell from '@/components/AppShell.vue';
+import LoginModal from '@/components/LoginModal.vue';
+import ManagerControlPanel from '@/components/ManagerControlPanel.vue';
+import ServerOverview from '@/components/ServerOverview.vue';
+import { useServerSnapshot } from '@/composables/useServerSnapshot';
+import { useSession } from '@/composables/useSession';
+import type { UpdateServerConfigRequest } from '@/types/api';
 
-const route = useRoute()
-const router = useRouter()
-const loginOpen = ref(false)
-const loginLoading = ref(false)
-const loginError = ref('')
+const route = useRoute();
+const serverId = computed(() => String(route.params.serverId ?? ''));
+const clientType = computed(() => String(route.params.clientType ?? 'visitor'));
+const managerView = computed(() => clientType.value === 'manager');
 
-const { servers } = useServerDirectory()
-const { session, isAuthenticated, login, logout, refreshSession } = useSession()
+const loginOpen = ref(false);
+const errorMessage = ref('');
 
-const serverId = computed(() => String(route.params.serverId))
-const clientType = computed(() => route.params.clientType === 'manager' ? 'manager' : 'visitor')
+const sessionState = useSession();
+const snapshotState = useServerSnapshot(serverId, managerView);
 
-const {
-  snapshot,
-  logs,
-  loading,
-  actionLoading,
-  error,
-  actionMessage,
-  canManage,
-  runPowerAction,
-  executeCommand,
-  updateServerConfig,
-  createCustomCommand,
-  updateCustomCommand,
-  deleteCustomCommand,
-  opPlayer,
-  deopPlayer,
-  banPlayer,
-  sendMessage,
-  suspendAsset,
-  resumeAsset,
-} = useServerSnapshot(() => serverId.value, () => clientType.value === 'manager')
+onMounted(async () => {
+  await sessionState.loadCurrentSession();
+  if (managerView.value && !sessionState.isAuthenticated.value) {
+    loginOpen.value = true;
+  }
+  snapshotState.startPolling(managerView.value ? 6000 : 8000);
+});
 
-void refreshSession()
+onBeforeUnmount(() => {
+  snapshotState.stopPolling();
+});
 
-async function handleLogin(payload: { username: string; password: string; totpCode: string }) {
-  loginLoading.value = true
-  loginError.value = ''
+watch([serverId, managerView], () => {
+  snapshotState.stopPolling();
+  snapshotState.startPolling(managerView.value ? 6000 : 8000);
+});
 
+function openLogin() {
+  loginOpen.value = true;
+}
+
+function closeLogin() {
+  loginOpen.value = false;
+}
+
+function onLoginSuccess() {
+  loginOpen.value = false;
+  void snapshotState.refreshAll();
+}
+
+async function guardAction(action: () => Promise<unknown>, fallbackMessage: string) {
   try {
-    await login(payload)
-    loginOpen.value = false
-  } catch (submitError) {
-    loginError.value = submitError instanceof Error ? submitError.message : '登录失败'
-  } finally {
-    loginLoading.value = false
+    errorMessage.value = '';
+    await action();
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : fallbackMessage;
   }
 }
 
-async function handleLogout() {
-  await logout()
+async function onPower(action: 'start' | 'stop' | 'restart') {
+  await guardAction(() => snapshotState.power(action), '电源操作失败。');
 }
 
-function navigate(server: string, type: 'visitor' | 'manager') {
-  void router.push(`/servers/${server}/${type}`)
+async function onConsole(command: string) {
+  await guardAction(() => snapshotState.executeConsoleCommand(command), '命令发送失败。');
 }
 
-function openLogin() {
-  loginError.value = ''
-  loginOpen.value = true
+async function onPlayerAction(payload: { action: 'op' | 'deop' | 'ban'; playerName: string; reason?: string }) {
+  await guardAction(
+    () =>
+      snapshotState.runPlayerAction(payload.action, {
+        playerName: payload.playerName,
+        reason: payload.reason,
+      }),
+    '玩家操作失败。',
+  );
+}
+
+async function onSendMessage(payload: { message: string; targetPlayer?: string }) {
+  await guardAction(() => snapshotState.sendMessage(payload), '消息发送失败。');
+}
+
+async function onAssetToggle(payload: { assetId: string; nextEnabled: boolean }) {
+  await guardAction(
+    () =>
+      payload.nextEnabled
+        ? snapshotState.resumeAsset({ assetId: payload.assetId })
+        : snapshotState.suspendAsset({ assetId: payload.assetId }),
+    '资源切换失败。',
+  );
+}
+
+async function onUpdateConfig(payload: UpdateServerConfigRequest) {
+  await guardAction(() => snapshotState.updateServerConfig(payload), '保存服务器配置失败。');
+}
+
+async function onCreateCommand(payload: { displayName: string; commandText: string; description: string }) {
+  await guardAction(() => snapshotState.createCustomCommand(payload), '创建自定义命令失败。');
+}
+
+async function onUpdateCommand(payload: {
+  commandId: string;
+  displayName: string;
+  commandText: string;
+  description: string;
+}) {
+  await guardAction(
+    () =>
+      snapshotState.updateCustomCommand(payload.commandId, {
+        displayName: payload.displayName,
+        commandText: payload.commandText,
+        description: payload.description,
+      }),
+    '更新自定义命令失败。',
+  );
+}
+
+async function onDeleteCommand(commandId: string) {
+  await guardAction(() => snapshotState.deleteCustomCommand(commandId), '删除自定义命令失败。');
+}
+
+async function onExecuteCommand(commandText: string) {
+  await guardAction(() => snapshotState.executeConsoleCommand(commandText), '执行自定义命令失败。');
+}
+
+async function logout() {
+  await sessionState.logout();
+  loginOpen.value = true;
 }
 </script>
 
 <template>
   <AppShell
-    :title="clientType === 'manager' ? '管理工作台' : '访客面板'"
-    :subtitle="clientType === 'manager'
-      ? '管理视图已接入鉴权、日志、命令、自定义命令管理和第一版真实进程控制。'
-      : '公开视图只展示安全可公开的数据。'"
-    :servers="servers"
-    :current-server-id="serverId"
-    :current-client-type="clientType"
-    @navigate="navigate"
+    :title="managerView ? '服务器管理台' : '服务器信息面板'"
+    :subtitle="managerView ? '查看完整日志、控制服务端进程并执行管理操作。' : '查看服务器状态、玩家与公开聊天信息。'"
+    :manager-mode="managerView"
   >
-    <section class="content-stack">
-      <Loading :active="loading" />
+    <template #header-actions>
+      <div class="header-actions">
+        <button v-if="managerView && !sessionState.isAuthenticated.value" class="header-button" @click="openLogin">
+          管理员登录
+        </button>
+        <button v-if="managerView && sessionState.isAuthenticated.value" class="header-button" @click="logout">
+          退出登录
+        </button>
+      </div>
+    </template>
 
-      <Card v-if="clientType === 'manager'" class="panel-card">
-        <div class="workspace-header">
-          <div>
-            <h2>管理认证</h2>
-            <p>{{ isAuthenticated ? `当前登录：${session?.displayName}` : '需要先完成 2FA 登录后才能访问管理接口。' }}</p>
-          </div>
-          <div class="inline-actions">
-            <Button v-if="!isAuthenticated" type="primary" @click="openLogin">登录</Button>
-            <Button v-else @click="handleLogout">退出登录</Button>
-          </div>
-        </div>
-      </Card>
+    <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
 
-      <Card v-if="error" color="app-red" class="panel-card">
-        <p>{{ error }}</p>
-      </Card>
+    <ServerOverview :snapshot="snapshotState.snapshot.value" :manager-view="managerView" />
 
-      <template v-if="snapshot">
-        <ServerOverview :snapshot="snapshot" />
-
-        <ManagerControlPanel
-          v-if="clientType === 'manager' && canManage"
-          :snapshot="snapshot"
-          :logs="logs"
-          :action-loading="actionLoading"
-          :action-message="actionMessage"
-          @power="runPowerAction"
-          @execute="executeCommand"
-          @update-config="updateServerConfig"
-          @create-command="createCustomCommand"
-          @update-command="updateCustomCommand"
-          @delete-command="deleteCustomCommand"
-          @op-player="opPlayer"
-          @deop-player="deopPlayer"
-          @ban-player="banPlayer"
-          @send-message="sendMessage"
-          @suspend-asset="suspendAsset"
-          @resume-asset="resumeAsset"
-        />
-
-        <Card v-else-if="clientType === 'manager'" class="panel-card">
-          <h3>等待登录</h3>
-          <p>当前页面已经切到管理路由，但未持有有效 token，后端不会返回管理数据。</p>
-          <div class="inline-actions top-space">
-            <Button type="primary" @click="openLogin">开始登录</Button>
-          </div>
-        </Card>
-      </template>
-    </section>
+    <ManagerControlPanel
+      v-if="managerView && sessionState.isAuthenticated.value"
+      :snapshot="snapshotState.snapshot.value"
+      :logs="snapshotState.logs.value"
+      :busy="snapshotState.busy.value"
+      @power="onPower"
+      @console="onConsole"
+      @player-action="onPlayerAction"
+      @send-message="onSendMessage"
+      @asset-toggle="onAssetToggle"
+      @update-config="onUpdateConfig"
+      @create-command="onCreateCommand"
+      @update-command="onUpdateCommand"
+      @delete-command="onDeleteCommand"
+      @execute-command="onExecuteCommand"
+    />
 
     <LoginModal
-      v-model:open="loginOpen"
-      :loading="loginLoading"
-      :error="loginError"
-      @submit="handleLogin"
+      v-if="managerView"
+      v-model="loginOpen"
+      :server-id="serverId"
+      @close="closeLogin"
+      @success="onLoginSuccess"
     />
   </AppShell>
 </template>
+
+<style scoped>
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.header-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: #5b8f5a;
+  color: #fffdf3;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.error-banner {
+  margin: 0 0 18px;
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(185, 72, 53, 0.14);
+  color: #9a3326;
+}
+</style>

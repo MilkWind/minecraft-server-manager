@@ -70,6 +70,7 @@ public class ServerProcessService {
             long generation = runtime.nextProcessGeneration();
 
             runtime.clearTransientState();
+            runtime.setRestartRecommended(false);
             runtime.attachProcess(startedProcess, writer, "STARTING", generation);
             serverStatusService.updateStatus(config.getServerId(), "STARTING");
             attachLogPump(runtime, startedProcess, generation);
@@ -203,9 +204,9 @@ public class ServerProcessService {
     private void updateRuntimeStatusFromLine(ServerRuntimeState runtime, String message) {
         String normalized = message.toLowerCase(Locale.ROOT);
         if (normalized.contains("done (") || normalized.contains("for help, type \"help\"")) {
-            runtime.setStatus("ONLINE");
+            updateRuntimeStatus(runtime, "ONLINE");
         } else if (normalized.contains("stopping server") || normalized.contains("server stopped")) {
-            runtime.setStatus("STOPPING");
+            updateRuntimeStatus(runtime, "STOPPING");
         }
     }
 

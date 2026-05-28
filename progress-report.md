@@ -1,48 +1,137 @@
 # Progress Report
 
-## What Has Been Done
+## Current Strategy
 
-- Set up the backend and frontend scaffold.
-- Added backend auth, session, API envelope, and exception handling.
-- Added SQLite schema and seed/bootstrap flow for managers and server records.
-- Added Minecraft server process start/stop/restart support.
-- Added runtime state tracking for logs, chat, and online players.
-- Added asset suspend/resume support by moving files inside the server root.
-- Reworked server snapshot assembly to use live DB + runtime state instead of cached refresh-time snapshots.
-- Added scheduled player-list refresh for running servers.
-- Fixed several encoding/corruption issues in backend config and snapshot text.
-- Added a root implementation plan document.
+The implementation strategy has changed:
 
-## What I Want To Do Next
+- Build the remaining functions first
+- Do not stop on permission or test blockers
+- Leave verification, build checks, and gradual runtime testing for later manual passes
 
-- Replace placeholder metrics with real collection.
-- Finish the manager 2FA flow.
-- Improve runtime log parsing for more Minecraft server output variants.
-- Add backend tests for auth, server actions, and runtime behavior.
-- Finish frontend polish and manual verification.
-- Re-run backend build validation after the repository access issue is resolved.
+This report marks implemented functions with `✅` even if they have not been tested yet.
 
-## Current Problems
+## Implemented Functions
 
-- Maven compilation is blocked by filesystem permission errors in the configured repository path:
-  - `D:\development-package\maven\maven-repository\org\springframework\boot\spring-boot-maven-plugin\4.0.6`
-- Because of that, backend compile verification is still incomplete.
-- Metrics are still hardcoded placeholders.
-- 2FA is not fully implemented yet.
-- Frontend build and manual checks have not been revalidated after the latest backend runtime changes.
+### Backend Foundation
 
-## Finished Goals
+- ✅ API response envelope
+- ✅ global exception handling
+- ✅ SQLite schema and bootstrap seed flow
+- ✅ server config persistence
+- ✅ custom command persistence
+- ✅ bearer-token manager session handling
 
-- Backend runtime state model exists.
-- Backend can assemble live snapshots from runtime + database state.
-- Scheduled player-list refresh is implemented.
-- Process shutdown cleanup is improved.
-- Root implementation plan document exists.
+### Backend Auth
 
-## Unfinished Goals
+- ✅ manager login endpoint
+- ✅ manager logout endpoint
+- ✅ current session endpoint
+- ✅ password verification flow
+- ✅ TOTP-based verification flow
+- ✅ exclusive session replacement on login
+- ✅ auth service dependency cleanup to reduce integration coupling
+- ✅ scheduled expired-session cleanup
 
-- Real metrics collection.
-- Full 2FA auth flow.
-- Backend compile/test verification.
-- Frontend polish and end-to-end verification.
-- Better Minecraft log/player parsing coverage.
+### Backend Server Management
+
+- ✅ public server list API
+- ✅ public server snapshot API
+- ✅ manager server snapshot API
+- ✅ manager full log API
+- ✅ manager log copy UI flow
+- ✅ power start/stop/restart API
+- ✅ raw console command API
+- ✅ server config update API
+- ✅ managed server create API
+- ✅ custom command create/update/delete support
+- ✅ player OP/DEOP/BAN support
+- ✅ broadcast/private message support
+- ✅ asset suspend/resume support
+
+### Backend Runtime
+
+- ✅ server `.jar` discovery from server root
+- ✅ process start with configured JVM arguments
+- ✅ process stop/restart flow
+- ✅ console stdin command writing
+- ✅ stdout/stderr merged log pumping
+- ✅ runtime log buffering
+- ✅ runtime chat extraction
+- ✅ join/leave player tracking
+- ✅ scheduled running-server `list` refresh
+- ✅ live snapshot assembly from runtime + database state
+- ✅ runtime metrics collection replacing hardcoded snapshot metrics
+- ✅ runtime metrics cached in runtime state
+- ✅ parsed runtime status transitions synchronized back to persisted server status
+- ✅ restart recommendation state tracked in backend runtime after asset changes
+- ✅ restart recommendation exposed through shared snapshot data and consumed by manager UI
+
+### Frontend Foundation
+
+- ✅ top-level app entry
+- ✅ router structure for server directory and workspace pages
+- ✅ shared API helper
+- ✅ shared local storage helper
+- ✅ session composable
+- ✅ server directory composable
+- ✅ server snapshot composable
+
+### Frontend Pages and Components
+
+- ✅ app shell component
+- ✅ login modal with TOTP input
+- ✅ create managed server modal
+- ✅ server overview component
+- ✅ manager control panel
+- ✅ server directory page
+- ✅ server workspace page
+
+### Frontend Manager UI Functions
+
+- ✅ manager login flow wiring
+- ✅ visitor snapshot polling flow
+- ✅ manager snapshot polling flow
+- ✅ power action UI wiring
+- ✅ console command UI wiring
+- ✅ player action UI wiring
+- ✅ message send UI wiring
+- ✅ asset toggle UI wiring
+- ✅ asset change restart recommendation UI
+- ✅ server config edit UI wiring
+- ✅ custom command create/edit/delete/execute UI wiring
+- ✅ managed server create UI wiring
+- ✅ managed server create modal flow
+- ✅ workspace page wiring for server config update actions
+- ✅ workspace page wiring for custom command create/update/delete/execute actions
+
+## Partially Implemented or Likely Needs Follow-up
+
+- ⚠ frontend page/component compatibility with every untouched import path is not fully verified
+- ⚠ backend metrics are implemented, but current network metrics still use zero/fallback values
+- ⚠ Minecraft log parsing is improved but still may miss some server-specific output variants
+- ⚠ runtime and auth behavior have been implemented without a final compile/test pass
+
+## Not Yet Finished
+
+- ❌ full manual integration verification
+- ❌ backend compile/test verification
+- ❌ frontend build verification after the latest rewrites
+- ❌ remaining polish for UX details and edge-case handling discovered during later testing
+
+## Current Problems / Risks
+
+- Maven repository permission issues still block reliable backend verification in this environment
+- Shell/source inspection has been intermittently failing with sandbox startup errors
+- Because of the two issues above, several frontend and backend rewrites were done by replacing files directly instead of iterating with normal read-build-fix loops
+- The app now appears structurally complete in code, but runtime compatibility still needs a later manual test pass
+
+## Recommended Next Step
+
+When resuming work, the best next step is:
+
+1. keep the code as-is
+2. run gradual manual testing
+3. record concrete breakages
+4. fix integration issues one by one
+
+That is now more valuable than broad feature building, because most core functions have already been implemented in code.

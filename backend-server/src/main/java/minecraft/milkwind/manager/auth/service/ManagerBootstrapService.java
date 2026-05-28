@@ -38,7 +38,7 @@ public class ManagerBootstrapService {
         user.setUsername(bootstrap.getUsername());
         user.setDisplayName(bootstrap.getDisplayName());
         user.setPasswordHash(passwordEncoder.encode(bootstrap.getPassword()));
-        user.setTotpCode(bootstrap.getTotpCode());
+        user.setTotpCode(bootstrap.getTotpSecret());
         user.setActive(Boolean.TRUE);
         user.setCreatedAt(now);
         user.setUpdatedAt(now);

@@ -18,6 +18,8 @@ public class ServerRuntimeState {
     private volatile BufferedWriter consoleWriter;
     private volatile long processGeneration;
     private volatile Instant lastListRefreshAt;
+    private volatile ServerRuntimeMetrics metrics = ServerRuntimeMetrics.empty();
+    private volatile boolean restartRecommended;
     private final AtomicLong generationCounter = new AtomicLong();
     private final Deque<RuntimeLogLine> recentLines = new ConcurrentLinkedDeque<>();
     private final Deque<RuntimeLogLine> recentChatLines = new ConcurrentLinkedDeque<>();
@@ -77,6 +79,22 @@ public class ServerRuntimeState {
         this.lastListRefreshAt = Instant.now();
     }
 
+    public ServerRuntimeMetrics getMetrics() {
+        return metrics;
+    }
+
+    public void setMetrics(ServerRuntimeMetrics metrics) {
+        this.metrics = metrics;
+    }
+
+    public boolean isRestartRecommended() {
+        return restartRecommended;
+    }
+
+    public void setRestartRecommended(boolean restartRecommended) {
+        this.restartRecommended = restartRecommended;
+    }
+
     public Deque<RuntimeLogLine> getRecentLines() {
         return recentLines;
     }
@@ -105,6 +123,8 @@ public class ServerRuntimeState {
     public synchronized void clearTransientState() {
         onlinePlayers.clear();
         lastListRefreshAt = null;
+        metrics = ServerRuntimeMetrics.empty();
+        restartRecommended = false;
     }
 
     public void appendLine(String level, String source, String line) {

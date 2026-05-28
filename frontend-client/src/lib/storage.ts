@@ -1,26 +1,33 @@
-import type { AuthSession } from '../types/api'
+const TOKEN_KEY = 'minecraft-manager-token';
+const SERVER_ID_KEY = 'minecraft-manager-server-id';
 
-const SESSION_STORAGE_KEY = 'minecraft-manager-session'
-
-export function loadSession(): AuthSession | null {
-  const raw = window.localStorage.getItem(SESSION_STORAGE_KEY)
-  if (!raw) {
-    return null
+function getStorage() {
+  if (typeof window === 'undefined') {
+    return null;
   }
-
-  try {
-    return JSON.parse(raw) as AuthSession
-  } catch {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY)
-    return null
-  }
+  return window.localStorage;
 }
 
-export function saveSession(session: AuthSession | null) {
-  if (session == null) {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY)
-    return
-  }
+export function readStoredToken(): string {
+  return getStorage()?.getItem(TOKEN_KEY) ?? '';
+}
 
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+export function storeToken(token: string): void {
+  getStorage()?.setItem(TOKEN_KEY, token);
+}
+
+export function removeStoredToken(): void {
+  getStorage()?.removeItem(TOKEN_KEY);
+}
+
+export function readStoredServerId(): string {
+  return getStorage()?.getItem(SERVER_ID_KEY) ?? '';
+}
+
+export function storeServerId(serverId: string): void {
+  getStorage()?.setItem(SERVER_ID_KEY, serverId);
+}
+
+export function removeStoredServerId(): void {
+  getStorage()?.removeItem(SERVER_ID_KEY);
 }

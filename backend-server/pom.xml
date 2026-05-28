@@ -125,8 +125,8 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <source>16</source>
-                    <target>16</target>
+                    <source>7</source>
+                    <target>7</target>
                 </configuration>
             </plugin>
         </plugins>

@@ -1,92 +1,124 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Button, Card, Loading } from 'animal-island-vue'
-import { useRouter } from 'vue-router'
-import AppShell from '../components/AppShell.vue'
-import CreateServerModal from '../components/CreateServerModal.vue'
-import { useServerDirectory } from '../composables/useServerDirectory'
-import { api } from '../lib/api'
-import { useSession } from '../composables/useSession'
-import type { CreateManagedServerRequest } from '../types/api'
+import { onMounted, ref } from 'vue';
+import { RouterLink } from 'vue-router';
+import AppShell from '@/components/AppShell.vue';
+import CreateServerModal from '@/components/CreateServerModal.vue';
+import { useServerDirectory } from '@/composables/useServerDirectory';
+import type { CreateManagedServerRequest } from '@/types/api';
 
-const router = useRouter()
-const { servers, loading, error, loadServers } = useServerDirectory()
-const { session, isAuthenticated, refreshSession } = useSession()
+const directory = useServerDirectory();
+const showCreate = ref(false);
+const errorMessage = ref('');
 
-const createOpen = ref(false)
-const createLoading = ref(false)
-const createError = ref('')
+onMounted(() => {
+  void directory.loadServers();
+});
 
-const shellServers = computed(() => servers.value)
-
-void refreshSession()
-
-function openServer(serverId: string, clientType: 'visitor' | 'manager') {
-  void router.push(`/servers/${serverId}/${clientType}`)
-}
-
-async function handleCreateServer(payload: CreateManagedServerRequest) {
-  if (session.value == null) {
-    createError.value = '请先登录管理账号'
-    return
-  }
-
-  createLoading.value = true
-  createError.value = ''
-
+async function createServer(payload: CreateManagedServerRequest) {
   try {
-    await api.createManagedServer(payload, session.value.token)
-    createOpen.value = false
-    await loadServers()
-  } catch (submitError) {
-    createError.value = submitError instanceof Error ? submitError.message : '新增服务器失败'
-  } finally {
-    createLoading.value = false
+    errorMessage.value = '';
+    await directory.createManagedServer(payload);
+    showCreate.value = false;
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '创建服务器失败。';
   }
 }
 </script>
 
 <template>
   <AppShell
-    title="轻量管理多台 Minecraft 服务器"
-    subtitle="当前实现已经接入真实路由、认证入口、SQLite 持久层、自定义命令管理，以及第一版服务器进程控制入口。"
-    :servers="shellServers"
-    current-client-type="visitor"
-    @navigate="openServer"
+    title="服务器目录"
+    subtitle="选择公开查看入口，或为受管服务器建立新的目录记录。"
   >
-    <section class="content-stack">
-      <Loading :active="loading" />
-      <Card class="panel-card">
-        <h2>服务器入口</h2>
-        <p v-if="error" class="status-note">{{ error }}</p>
-        <div class="directory-grid">
-          <Card
-            v-for="server in servers"
-            :key="server.serverId"
-            color="default"
-            class="directory-card"
-          >
-            <h3>{{ server.displayName }}</h3>
-            <p>{{ server.publicAddress }}</p>
-            <p>版本 {{ server.gameVersion }} · 在线 {{ server.onlinePlayerCount }} 人</p>
-            <div class="inline-actions top-space">
-              <Button type="primary" @click="openServer(server.serverId, 'visitor')">查看访客页</Button>
-              <Button @click="openServer(server.serverId, 'manager')">进入管理页</Button>
-            </div>
-          </Card>
+    <template #header-actions>
+      <button class="create-button" @click="showCreate = true">创建受管服务器</button>
+    </template>
+
+    <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
+
+    <section class="server-grid">
+      <article v-for="server in directory.servers.value" :key="server.serverId" class="server-card">
+        <p class="card-status">{{ server.status }}</p>
+        <h3>{{ server.displayName }}</h3>
+        <p>{{ server.publicAddress }}</p>
+        <p>版本：{{ server.gameVersion }}</p>
+        <p>在线人数：{{ server.onlinePlayerCount }}</p>
+        <div class="card-actions">
+          <RouterLink :to="`/servers/${server.serverId}/visitor`">访客视图</RouterLink>
+          <RouterLink :to="`/servers/${server.serverId}/manager`">管理视图</RouterLink>
         </div>
-        <div class="inline-actions top-space">
-          <Button type="dashed" @click="loadServers">刷新列表</Button>
-          <Button v-if="isAuthenticated" type="primary" @click="createOpen = true">新增受管服务器</Button>
-        </div>
-      </Card>
+      </article>
     </section>
 
     <CreateServerModal
-      v-model:open="createOpen"
-      :loading="createLoading"
-      :error="createError"
-      @submit="handleCreateServer"
+      v-model="showCreate"
+      :busy="directory.creating.value"
+      @close="showCreate = false"
+      @submit="createServer"
     />
   </AppShell>
 </template>
+
+<style scoped>
+.create-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: #5b8f5a;
+  color: #fffdf3;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.error-banner {
+  margin: 0 0 18px;
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(185, 72, 53, 0.14);
+  color: #9a3326;
+}
+
+.server-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.server-card {
+  display: grid;
+  gap: 12px;
+  border: 2px solid rgba(91, 143, 90, 0.28);
+  border-radius: 28px;
+  padding: 20px;
+  background: rgba(255, 252, 243, 0.84);
+}
+
+.server-card h3,
+.server-card p {
+  margin: 0;
+}
+
+.card-status {
+  color: #5b8f5a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.card-actions a {
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(91, 143, 90, 0.14);
+  color: #3f683f;
+  font-weight: 800;
+  text-decoration: none;
+}
+</style>

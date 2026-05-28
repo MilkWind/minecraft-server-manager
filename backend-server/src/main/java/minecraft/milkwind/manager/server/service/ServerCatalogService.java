@@ -17,7 +17,9 @@ import minecraft.milkwind.manager.server.entity.ServerConfigEntity;
 import minecraft.milkwind.manager.server.mapper.CustomCommandMapper;
 import minecraft.milkwind.manager.server.mapper.ServerConfigMapper;
 import minecraft.milkwind.manager.server.runtime.ServerProcessService;
+import minecraft.milkwind.manager.server.runtime.ServerMetricsService;
 import minecraft.milkwind.manager.server.runtime.ServerRuntimeState;
+import minecraft.milkwind.manager.server.runtime.ServerRuntimeMetrics;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +36,7 @@ public class ServerCatalogService {
     private final DatabaseBootstrapService databaseBootstrapService;
     private final ManagerBootstrapService managerBootstrapService;
     private final ServerProcessService serverProcessService;
+    private final ServerMetricsService serverMetricsService;
     private final ServerAssetService serverAssetService;
 
     public ServerCatalogService(
@@ -42,6 +45,7 @@ public class ServerCatalogService {
             DatabaseBootstrapService databaseBootstrapService,
             ManagerBootstrapService managerBootstrapService,
             ServerProcessService serverProcessService,
+            ServerMetricsService serverMetricsService,
             ServerAssetService serverAssetService
     ) {
         this.serverConfigMapper = serverConfigMapper;
@@ -49,6 +53,7 @@ public class ServerCatalogService {
         this.databaseBootstrapService = databaseBootstrapService;
         this.managerBootstrapService = managerBootstrapService;
         this.serverProcessService = serverProcessService;
+        this.serverMetricsService = serverMetricsService;
         this.serverAssetService = serverAssetService;
     }
 
@@ -207,12 +212,14 @@ public class ServerCatalogService {
                 ? listCustomCommands(config.getServerId())
                 : List.of();
 
+        serverMetricsService.collect(config, runtime);
+        ServerRuntimeMetrics runtimeMetrics = runtime.getMetrics();
         ServerMetricsDto metrics = new ServerMetricsDto(
-                28.6,
-                2734,
-                4096,
-                218.4,
-                96.7
+                runtimeMetrics.cpuUsagePercent(),
+                runtimeMetrics.memoryUsedMb(),
+                runtimeMetrics.memoryMaxMb(),
+                runtimeMetrics.networkInboundKbps(),
+                runtimeMetrics.networkOutboundKbps()
         );
 
         return new ServerSnapshotDto(
@@ -228,6 +235,7 @@ public class ServerCatalogService {
                 serverAssetService.listResourcePacks(config),
                 publicChatMessages,
                 metrics,
+                runtime.isRestartRecommended(),
                 managerView ? config.getRootDirectory() : null,
                 managerView ? config.getJvmArguments() : null,
                 customCommands

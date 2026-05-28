@@ -1,0 +1,14 @@
+export interface AuthSession {
+  token: string;
+  username: string;
+  displayName: string;
+  expiresAt: string;
+  allowedServerIds: string[];
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+  totpCode: string;
+  serverId: string;
+}

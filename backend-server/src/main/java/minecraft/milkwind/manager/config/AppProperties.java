@@ -28,7 +28,7 @@ public class AppProperties {
         private String username = "admin";
         private String displayName = "管理员";
         private String password = "admin123456";
-        private String totpCode = "123456";
+        private String totpSecret = "JBSWY3DPEHPK3PXP";
     }
 
     @Getter
