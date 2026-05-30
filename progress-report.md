@@ -63,6 +63,14 @@ Verified in this pass:
 
 - [x] Frontend type-check and production build
 - [x] Backend tests
+- [x] Public server list API
+- [x] Public server snapshot API
+- [x] Manager login API with bcrypt password + TOTP
+- [x] Manager current-session API with bearer token
+- [x] Manager server snapshot API with bearer token
+- [x] Unauthorized manager snapshot rejection
+- [x] Invalid login rejection
+- [x] Snapshot metrics JSON contract matches frontend fields
 
 Still pending:
 
@@ -71,7 +79,7 @@ Still pending:
 - Real Minecraft server lifecycle checks
 - Asset suspend/resume behavior on a live server
 - Log parsing and player detection against live output
-- TOTP login verification
+- Logout/token-revocation verification with a fresh TOTP
 - Reverse proxy and deployment validation
 
 ## Still Unfinished
