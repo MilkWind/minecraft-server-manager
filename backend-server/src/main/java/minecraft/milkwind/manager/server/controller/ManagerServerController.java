@@ -20,7 +20,7 @@ import minecraft.milkwind.manager.server.dto.UpdateServerConfigRequest;
 import minecraft.milkwind.manager.server.dto.UpdateServerConfigResultDto;
 import minecraft.milkwind.manager.server.service.ServerCatalogService;
 import minecraft.milkwind.manager.server.service.ServerManagementService;
-import minecraft.milkwind.manager.security.ManagerPrincipal;
+import minecraft.milkwind.manager.auth.model.ManagerSession;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -143,7 +143,7 @@ public class ManagerServerController {
     public ApiResponse<CustomCommandDto> createCommand(
             @PathVariable String serverId,
             @RequestBody CustomCommandUpsertRequest request,
-            @AuthenticationPrincipal ManagerPrincipal principal
+            @AuthenticationPrincipal ManagerSession principal
     ) {
         return ApiResponse.success(serverManagementService.createCustomCommand(serverId, request, principal.username()));
     }

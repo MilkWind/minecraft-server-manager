@@ -120,6 +120,31 @@ public class AuthService {
         );
     }
 
+    public ManagerSession authenticate(String token) {
+        String normalizedToken = requireText(token, "token");
+        ManagerSessionEntity entity = managerSessionMapper.selectById(normalizedToken);
+        if (entity == null) {
+            return null;
+        }
+
+        Instant expiresAt = Instant.parse(entity.getExpiresAt());
+        if (expiresAt.isBefore(Instant.now())) {
+            managerSessionMapper.deleteById(entity.getToken());
+            return null;
+        }
+
+        Instant createdAt = Instant.parse(entity.getCreatedAt());
+        Instant lastSeenAt = Instant.parse(entity.getLastSeenAt());
+        return new ManagerSession(
+                entity.getToken(),
+                entity.getUsername(),
+                entity.getDisplayName(),
+                createdAt,
+                lastSeenAt,
+                expiresAt
+        );
+    }
+
     public void logout(ManagerSession principal) {
         if (principal == null) {
             return;

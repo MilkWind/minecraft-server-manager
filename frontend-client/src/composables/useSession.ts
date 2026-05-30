@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue';
-import { apiRequest } from '@/lib/api';
+import { ApiError, apiRequest, registerUnauthorizedHandler } from '@/lib/api';
 import {
   readStoredServerId,
   readStoredToken,
@@ -13,6 +13,12 @@ import type { AuthSession, LoginRequest } from '@/types/api';
 const session = ref<AuthSession | null>(null);
 const loading = ref(false);
 const selectedServerId = ref(readStoredServerId());
+
+registerUnauthorizedHandler(() => {
+  session.value = null;
+  removeStoredToken();
+  removeStoredServerId();
+});
 
 export function useSession() {
   const token = computed(() => session.value?.token ?? readStoredToken());
@@ -32,6 +38,12 @@ export function useSession() {
       selectedServerId.value = request.serverId;
       storeServerId(request.serverId);
       return response;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        session.value = null;
+        removeStoredToken();
+      }
+      throw error;
     } finally {
       loading.value = false;
     }
@@ -54,7 +66,7 @@ export function useSession() {
         storeServerId(response.allowedServerIds[0]);
       }
       return response;
-    } catch {
+    } catch (error) {
       session.value = null;
       removeStoredToken();
       removeStoredServerId();
@@ -74,6 +86,11 @@ export function useSession() {
     }
   }
 
+  function selectServer(serverId: string) {
+    selectedServerId.value = serverId;
+    storeServerId(serverId);
+  }
+
   return {
     session,
     token,
@@ -85,5 +102,6 @@ export function useSession() {
     login,
     loadCurrentSession,
     logout,
+    selectServer,
   };
 }

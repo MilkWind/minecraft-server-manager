@@ -32,7 +32,7 @@ public class ServerRuntimeRefreshService {
         this.appProperties = appProperties;
     }
 
-    @Scheduled(fixedDelayString = "#{T(java.lang.Math).max(" + MIN_REFRESH_DELAY_MS + ", T(java.lang.Long).parseLong('${app.servers.list-refresh-interval-seconds}') * 1000L)}")
+    @Scheduled(fixedDelayString = "${app.servers.list-refresh-interval-seconds:15}000")
     public void refreshOnlineServerPlayerLists() {
         List<ServerConfigEntity> servers = serverConfigMapper.selectList(new LambdaQueryWrapper<>());
         Duration refreshInterval = Duration.ofSeconds(Math.max(1, appProperties.getServers().getListRefreshIntervalSeconds()));

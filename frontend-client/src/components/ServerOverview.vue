@@ -17,6 +17,9 @@ defineProps<{
       <p><strong>地址：</strong>{{ snapshot.publicAddress }}</p>
       <p><strong>版本：</strong>{{ snapshot.gameVersion }}</p>
       <p><strong>在线玩家：</strong>{{ snapshot.onlinePlayerCount }}</p>
+      <p v-if="snapshot.restartRecommended" class="restart-warning">
+        资源状态已变化，建议重启服务器。
+      </p>
       <p v-if="managerView && snapshot.rootDirectory"><strong>根目录：</strong>{{ snapshot.rootDirectory }}</p>
       <p v-if="managerView && snapshot.jvmArguments"><strong>JVM：</strong>{{ snapshot.jvmArguments }}</p>
     </article>
@@ -131,6 +134,14 @@ defineProps<{
 
 .status-panel {
   grid-column: span 4;
+}
+
+.restart-warning {
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(214, 148, 36, 0.14);
+  color: #8f5f16;
+  font-weight: 800;
 }
 
 .metric-grid {

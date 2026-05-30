@@ -3,20 +3,48 @@ import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import CreateServerModal from '@/components/CreateServerModal.vue';
+import LoginModal from '@/components/LoginModal.vue';
 import { useServerDirectory } from '@/composables/useServerDirectory';
+import { useSession } from '@/composables/useSession';
 import type { CreateManagedServerRequest } from '@/types/api';
 
 const directory = useServerDirectory();
+const sessionState = useSession();
 const showCreate = ref(false);
+const showLogin = ref(false);
+const pendingCreateAfterLogin = ref(false);
+const loginServerId = ref('');
 const errorMessage = ref('');
 
-onMounted(() => {
-  void directory.loadServers();
+onMounted(async () => {
+  await sessionState.loadCurrentSession();
+  await directory.loadServers();
+  const storedServerId = sessionState.selectedServerId.value;
+  loginServerId.value = storedServerId || directory.servers.value[0]?.serverId || '';
 });
+
+function openCreateFlow() {
+  if (sessionState.isAuthenticated.value) {
+    showCreate.value = true;
+    return;
+  }
+
+  pendingCreateAfterLogin.value = true;
+  showLogin.value = true;
+}
+
+function onLoginSuccess() {
+  showLogin.value = false;
+  if (pendingCreateAfterLogin.value) {
+    pendingCreateAfterLogin.value = false;
+    showCreate.value = true;
+  }
+}
 
 async function createServer(payload: CreateManagedServerRequest) {
   try {
     errorMessage.value = '';
+    sessionState.selectServer(payload.serverId);
     await directory.createManagedServer(payload);
     showCreate.value = false;
   } catch (error) {
@@ -31,7 +59,7 @@ async function createServer(payload: CreateManagedServerRequest) {
     subtitle="选择公开查看入口，或为受管服务器建立新的目录记录。"
   >
     <template #header-actions>
-      <button class="create-button" @click="showCreate = true">创建受管服务器</button>
+      <button class="create-button" @click="openCreateFlow">创建受管服务器</button>
     </template>
 
     <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
@@ -55,6 +83,14 @@ async function createServer(payload: CreateManagedServerRequest) {
       :busy="directory.creating.value"
       @close="showCreate = false"
       @submit="createServer"
+    />
+
+    <LoginModal
+      v-if="loginServerId"
+      v-model="showLogin"
+      :server-id="loginServerId"
+      @close="showLogin = false"
+      @success="onLoginSuccess"
     />
   </AppShell>
 </template>

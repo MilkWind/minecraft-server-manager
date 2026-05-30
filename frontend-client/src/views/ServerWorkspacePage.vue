@@ -7,6 +7,7 @@ import ManagerControlPanel from '@/components/ManagerControlPanel.vue';
 import ServerOverview from '@/components/ServerOverview.vue';
 import { useServerSnapshot } from '@/composables/useServerSnapshot';
 import { useSession } from '@/composables/useSession';
+import { ApiError } from '@/lib/api';
 import type { UpdateServerConfigRequest } from '@/types/api';
 
 const route = useRoute();
@@ -21,6 +22,7 @@ const sessionState = useSession();
 const snapshotState = useServerSnapshot(serverId, managerView);
 
 onMounted(async () => {
+  sessionState.selectServer(serverId.value);
   await sessionState.loadCurrentSession();
   if (managerView.value && !sessionState.isAuthenticated.value) {
     loginOpen.value = true;
@@ -29,11 +31,12 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  snapshotState.stopPolling();
+  snapshotState.disposePolling();
 });
 
 watch([serverId, managerView], () => {
-  snapshotState.stopPolling();
+  sessionState.selectServer(serverId.value);
+  snapshotState.disposePolling();
   snapshotState.startPolling(managerView.value ? 6000 : 8000);
 });
 
@@ -55,6 +58,11 @@ async function guardAction(action: () => Promise<unknown>, fallbackMessage: stri
     errorMessage.value = '';
     await action();
   } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      loginOpen.value = true;
+      errorMessage.value = '会话已过期，请重新登录。';
+      return;
+    }
     errorMessage.value = error instanceof Error ? error.message : fallbackMessage;
   }
 }

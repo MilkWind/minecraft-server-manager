@@ -25,6 +25,15 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
   const resourcePacks = computed(() => snapshot.value?.resourcePacks ?? []);
   const chatMessages = computed(() => snapshot.value?.chatMessages ?? []);
   const customCommands = computed<CustomCommand[]>(() => snapshot.value?.customCommands ?? []);
+  let currentPollingIntervalMs = 8000;
+
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      stopPolling();
+    } else if (pollTimer.value === null) {
+      startPolling(currentPollingIntervalMs);
+    }
+  }
 
   const resolvedServerId = () => toValue(serverIdSource);
   const resolvedManagerView = () => toValue(managerViewSource);
@@ -61,11 +70,17 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
   }
 
   function startPolling(intervalMs = 8000) {
+    currentPollingIntervalMs = intervalMs;
     stopPolling();
     void refreshAll();
     pollTimer.value = window.setInterval(() => {
-      void refreshAll();
+      if (!document.hidden) {
+        void refreshAll();
+      }
     }, intervalMs);
+
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
   }
 
   function stopPolling() {
@@ -73,6 +88,11 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
       window.clearInterval(pollTimer.value);
       pollTimer.value = null;
     }
+  }
+
+  function disposePolling() {
+    stopPolling();
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
   }
 
   async function runBusyAction<T>(action: () => Promise<T>) {
@@ -199,6 +219,7 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
     refreshAll,
     startPolling,
     stopPolling,
+    disposePolling,
     power,
     executeConsoleCommand,
     updateServerConfig,
