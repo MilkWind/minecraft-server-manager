@@ -10,7 +10,7 @@ export function useServerDirectory() {
   async function loadServers() {
     loading.value = true;
     try {
-      servers.value = await apiRequest<PublicServerSummary[]>('/api/public/servers');
+      servers.value = await apiRequest<PublicServerSummary[]>('/api/manager/servers');
       return servers.value;
     } finally {
       loading.value = false;
@@ -30,11 +30,16 @@ export function useServerDirectory() {
     }
   }
 
+  function clearServers() {
+    servers.value = [];
+  }
+
   return {
     servers,
     loading,
     creating,
     loadServers,
     createManagedServer,
+    clearServers,
   };
 }

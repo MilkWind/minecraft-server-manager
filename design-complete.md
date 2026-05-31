@@ -86,8 +86,8 @@ The application uses route paths that include:
 
 Example route intent:
 
-- Visitor route: view server information for one server
-- Manager route: access server management after authentication
+- Visitor route: `/servers/MilkWind/visitor` or `/servers/StarJourney/visitor`
+- Manager route: `/servers` is the admin directory, then `/servers/{serverId}/manager` opens management for a selected server
 
 Important rule:
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
+import { Button, Card, Input, Switch, Table, Tabs, type TabItem } from 'animal-island-vue';
 import type { CustomCommand, ServerSnapshot, UpdateServerConfigRequest } from '@/types/api';
 
 const props = defineProps<{
@@ -27,12 +28,21 @@ const emit = defineEmits<{
   executeCommand: [commandText: string];
 }>();
 
+const activeTab = ref('operations');
 const consoleCommand = ref('');
 const playerName = ref('');
 const banReason = ref('');
 const message = ref('');
 const targetPlayer = ref('');
 const copyFeedback = ref('');
+
+const tabs: TabItem[] = [
+  { key: 'operations', label: '运维' },
+  { key: 'config', label: '配置' },
+  { key: 'commands', label: '命令' },
+  { key: 'assets', label: '资源' },
+  { key: 'logs', label: '日志' },
+];
 
 const configForm = reactive<UpdateServerConfigRequest>({
   displayName: '',
@@ -73,6 +83,13 @@ const assets = computed(() => [
 ]);
 
 const commands = computed<CustomCommand[]>(() => props.snapshot?.customCommands ?? []);
+
+const logColumns = [
+  { title: '时间', dataIndex: 'timestamp' },
+  { title: '等级', dataIndex: 'level', width: 90 },
+  { title: '来源', dataIndex: 'source', width: 140 },
+  { title: '消息', dataIndex: 'message' },
+];
 
 function submitConsole() {
   if (!consoleCommand.value.trim()) {
@@ -177,154 +194,166 @@ function onAssetToggle(assetId: string, nextEnabled: boolean) {
 </script>
 
 <template>
-  <section class="manager-grid">
-    <article v-if="snapshot?.restartRecommended" class="panel wide warning-panel">
+  <section class="manager-surface">
+    <Card v-if="snapshot?.restartRecommended" class="warning-panel">
       <h3>建议重启服务器</h3>
       <p>资源状态已经发生变化，建议执行重启以确保模组、数据包或资源包状态完全生效。</p>
-    </article>
+    </Card>
 
-    <article class="panel">
-      <h3>电源控制</h3>
-      <div class="button-row">
-        <button :disabled="busy" @click="emit('power', 'start')">启动</button>
-        <button :disabled="busy" @click="emit('power', 'stop')">停止</button>
-        <button :disabled="busy" @click="emit('power', 'restart')">重启</button>
-      </div>
-    </article>
+    <Tabs v-model="activeTab" :items="tabs" leaf-animation shadow>
+      <template #operations>
+        <div class="tab-grid">
+          <Card class="panel">
+            <h3>电源控制</h3>
+            <div class="button-row">
+              <Button :disabled="busy" @click="emit('power', 'start')">启动</Button>
+              <Button :disabled="busy" @click="emit('power', 'stop')">停止</Button>
+              <Button type="primary" :disabled="busy" @click="emit('power', 'restart')">重启</Button>
+            </div>
+          </Card>
 
-    <article class="panel">
-      <h3>控制台命令</h3>
-      <div class="stack">
-        <input v-model="consoleCommand" placeholder="例如：say 服务器维护中" />
-        <button :disabled="busy" @click="submitConsole">发送命令</button>
-      </div>
-    </article>
+          <Card class="panel">
+            <h3>控制台命令</h3>
+            <div class="stack">
+              <Input v-model="consoleCommand" allow-clear placeholder="例如：say 服务器维护中" />
+              <Button type="primary" :disabled="busy" @click="submitConsole">发送命令</Button>
+            </div>
+          </Card>
 
-    <article class="panel">
-      <h3>玩家管理</h3>
-      <div class="stack">
-        <input v-model="playerName" placeholder="玩家名" />
-        <input v-model="banReason" placeholder="封禁原因（可选）" />
-        <div class="button-row">
-          <button :disabled="busy" @click="submitPlayerAction('op')">授予 OP</button>
-          <button :disabled="busy" @click="submitPlayerAction('deop')">移除 OP</button>
-          <button :disabled="busy" @click="submitPlayerAction('ban')">封禁</button>
+          <Card class="panel">
+            <h3>玩家管理</h3>
+            <div class="stack">
+              <Input v-model="playerName" allow-clear placeholder="玩家名" />
+              <Input v-model="banReason" allow-clear placeholder="封禁原因（可选）" />
+              <div class="button-row">
+                <Button :disabled="busy" @click="submitPlayerAction('op')">授予 OP</Button>
+                <Button :disabled="busy" @click="submitPlayerAction('deop')">移除 OP</Button>
+                <Button danger :disabled="busy" @click="submitPlayerAction('ban')">封禁</Button>
+              </div>
+            </div>
+          </Card>
+
+          <Card class="panel">
+            <h3>消息发送</h3>
+            <div class="stack">
+              <Input v-model="targetPlayer" allow-clear placeholder="目标玩家（留空则全服广播）" />
+              <Input v-model="message" allow-clear placeholder="消息内容" />
+              <Button type="primary" :disabled="busy" @click="submitMessage">发送消息</Button>
+            </div>
+          </Card>
         </div>
-      </div>
-    </article>
+      </template>
 
-    <article class="panel">
-      <h3>消息发送</h3>
-      <div class="stack">
-        <input v-model="targetPlayer" placeholder="目标玩家（留空则全服广播）" />
-        <input v-model="message" placeholder="消息内容" />
-        <button :disabled="busy" @click="submitMessage">发送消息</button>
-      </div>
-    </article>
+      <template #config>
+        <Card class="panel">
+          <h3>服务器配置</h3>
+          <div class="form-grid">
+            <Input v-model="configForm.displayName" placeholder="显示名称" />
+            <Input v-model="configForm.publicAddress" placeholder="公网地址" />
+            <Input v-model="configForm.rootDirectory" placeholder="服务器根目录" />
+            <Input v-model="configForm.gameVersion" placeholder="游戏版本" />
+            <Input v-model="configForm.jvmArguments" class="wide-input" placeholder="JVM 参数" />
+          </div>
+          <Button type="primary" :disabled="busy" @click="submitConfig">保存配置</Button>
+        </Card>
+      </template>
 
-    <article class="panel wide">
-      <h3>服务器配置</h3>
-      <div class="form-grid">
-        <input v-model="configForm.displayName" placeholder="显示名称" />
-        <input v-model="configForm.publicAddress" placeholder="公网地址" />
-        <input v-model="configForm.rootDirectory" placeholder="服务器根目录" />
-        <input v-model="configForm.gameVersion" placeholder="游戏版本" />
-        <input v-model="configForm.jvmArguments" class="wide-input" placeholder="JVM 参数" />
-      </div>
-      <button :disabled="busy" @click="submitConfig">保存配置</button>
-    </article>
-
-    <article class="panel wide">
-      <h3>自定义命令</h3>
-      <div class="form-grid">
-        <input v-model="commandForm.displayName" placeholder="命令名称" />
-        <input v-model="commandForm.commandText" placeholder="实际命令，例如 say hello" />
-        <input v-model="commandForm.description" class="wide-input" placeholder="描述（可选）" />
-      </div>
-      <div class="button-row">
-        <button :disabled="busy" @click="submitCommand">{{ editingCommandId ? '更新命令' : '创建命令' }}</button>
-        <button v-if="editingCommandId" :disabled="busy" @click="resetCommandForm">取消编辑</button>
-      </div>
-
-      <ul v-if="commands.length" class="command-list">
-        <li v-for="command in commands" :key="command.id">
-          <div class="command-copy">
-            <strong>{{ command.displayName }}</strong>
-            <p>{{ command.commandText }}</p>
-            <small>{{ command.description || '无描述' }}</small>
+      <template #commands>
+        <Card class="panel">
+          <h3>自定义命令</h3>
+          <div class="form-grid">
+            <Input v-model="commandForm.displayName" placeholder="命令名称" />
+            <Input v-model="commandForm.commandText" placeholder="实际命令，例如 say hello" />
+            <Input v-model="commandForm.description" class="wide-input" placeholder="描述（可选）" />
           </div>
           <div class="button-row">
-            <button :disabled="busy" @click="emit('executeCommand', command.commandText)">执行</button>
-            <button :disabled="busy" @click="editCommand(command)">编辑</button>
-            <button :disabled="busy" @click="emit('deleteCommand', command.id)">删除</button>
+            <Button type="primary" :disabled="busy" @click="submitCommand">
+              {{ editingCommandId ? '更新命令' : '创建命令' }}
+            </Button>
+            <Button v-if="editingCommandId" :disabled="busy" @click="resetCommandForm">取消编辑</Button>
           </div>
-        </li>
-      </ul>
-      <p v-else class="empty-text">还没有自定义命令。</p>
-    </article>
 
-    <article class="panel wide">
-      <h3>资源切换</h3>
-      <ul v-if="assets.length" class="asset-list">
-        <li v-for="asset in assets" :key="asset.id">
-          <div>
-            <strong>{{ asset.name }}</strong>
-            <p>{{ asset.type }} · {{ asset.enabled ? '当前启用' : '当前停用' }}</p>
+          <ul v-if="commands.length" class="command-list">
+            <li v-for="command in commands" :key="command.id">
+              <div class="command-copy">
+                <strong>{{ command.displayName }}</strong>
+                <p>{{ command.commandText }}</p>
+                <small>{{ command.description || '无描述' }}</small>
+              </div>
+              <div class="button-row">
+                <Button :disabled="busy" @click="emit('executeCommand', command.commandText)">执行</Button>
+                <Button :disabled="busy" @click="editCommand(command)">编辑</Button>
+                <Button danger :disabled="busy" @click="emit('deleteCommand', command.id)">删除</Button>
+              </div>
+            </li>
+          </ul>
+          <p v-else class="empty-text">还没有自定义命令。</p>
+        </Card>
+      </template>
+
+      <template #assets>
+        <Card class="panel">
+          <h3>资源切换</h3>
+          <ul v-if="assets.length" class="asset-list">
+            <li v-for="asset in assets" :key="asset.id">
+              <div>
+                <strong>{{ asset.name }}</strong>
+                <p>{{ asset.type }} · {{ asset.enabled ? '当前启用' : '当前停用' }}</p>
+              </div>
+              <Switch
+                :model-value="asset.enabled"
+                :disabled="busy"
+                @update:model-value="onAssetToggle(asset.id, $event)"
+              />
+            </li>
+          </ul>
+          <p v-else class="empty-text">没有可切换的资源。</p>
+        </Card>
+      </template>
+
+      <template #logs>
+        <Card class="panel">
+          <div class="log-header">
+            <h3>完整日志</h3>
+            <Button :disabled="busy" @click="copyLogs">复制日志</Button>
           </div>
-          <button :disabled="busy" @click="onAssetToggle(asset.id, !asset.enabled)">
-            {{ asset.enabled ? '停用' : '启用' }}
-          </button>
-        </li>
-      </ul>
-      <p v-else class="empty-text">没有可切换的资源。</p>
-    </article>
-
-    <article class="panel wide">
-      <div class="log-header">
-        <h3>完整日志</h3>
-        <button :disabled="busy" @click="copyLogs">复制日志</button>
-      </div>
-      <p v-if="copyFeedback" class="copy-feedback">{{ copyFeedback }}</p>
-      <ul class="log-list">
-        <li v-for="entry in logs" :key="entry.id">
-          <time>{{ new Date(entry.timestamp).toLocaleString() }}</time>
-          <strong>[{{ entry.level }}] {{ entry.source }}</strong>
-          <span>{{ entry.message }}</span>
-        </li>
-      </ul>
-    </article>
+          <p v-if="copyFeedback" class="copy-feedback">{{ copyFeedback }}</p>
+          <Table :columns="logColumns as any" :data-source="logs as any" row-key="id" :scroll="{ x: 720 }" empty-text="暂无日志" />
+        </Card>
+      </template>
+    </Tabs>
   </section>
 </template>
 
 <style scoped>
-.manager-grid {
+.manager-surface {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 18px;
+  margin-top: 18px;
 }
 
+.warning-panel,
 .panel {
-  grid-column: span 6;
   display: grid;
   gap: 14px;
-  border: 2px solid rgba(91, 143, 90, 0.28);
-  border-radius: 28px;
-  padding: 20px;
-  background: rgba(255, 252, 243, 0.84);
-}
-
-.wide {
-  grid-column: span 12;
 }
 
 .warning-panel {
-  border-color: rgba(214, 148, 36, 0.4);
-  background: rgba(255, 246, 213, 0.92);
+  border-color: rgba(245, 195, 28, 0.55);
+}
+
+.tab-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding-top: 18px;
 }
 
 .panel h3,
 .panel p,
-.panel small {
+.panel small,
+.warning-panel h3,
+.warning-panel p {
   margin: 0;
 }
 
@@ -354,37 +383,7 @@ function onAssetToggle(assetId: string, nextEnabled: boolean) {
   align-items: center;
 }
 
-input,
-button {
-  font: inherit;
-}
-
-input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 2px solid rgba(91, 143, 90, 0.34);
-  border-radius: 16px;
-  padding: 11px 14px;
-  background: rgba(255, 255, 255, 0.8);
-}
-
-button {
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 16px;
-  background: #5b8f5a;
-  color: #fffdf3;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: wait;
-  opacity: 0.66;
-}
-
 .asset-list,
-.log-list,
 .command-list {
   display: grid;
   gap: 12px;
@@ -394,48 +393,40 @@ button:disabled {
 }
 
 .asset-list li,
-.log-list li,
 .command-list li {
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  border-radius: 18px;
+  border-radius: var(--animal-border-radius-base);
   padding: 14px;
   background: rgba(236, 245, 223, 0.74);
+}
+
+.command-list li {
+  flex-direction: column;
 }
 
 .asset-list p,
 .command-copy p,
 .command-copy small,
-.copy-feedback {
-  color: #657364;
-}
-
-.log-list li,
-.command-list li {
-  flex-direction: column;
-}
-
-.log-list time {
-  color: #657364;
-  font-size: 12px;
-}
-
+.copy-feedback,
 .empty-text {
-  color: #657364;
+  color: var(--animal-text-color-secondary);
 }
 
 @media (max-width: 1000px) {
-  .panel {
-    grid-column: span 12;
-  }
-
+  .tab-grid,
   .form-grid {
     grid-template-columns: 1fr;
   }
 
   .wide-input {
     grid-column: span 1;
+  }
+
+  .asset-list li {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

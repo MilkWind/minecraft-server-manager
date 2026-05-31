@@ -7,7 +7,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/servers',
+      redirect: '/servers/MilkWind/visitor',
     },
     {
       path: '/servers',

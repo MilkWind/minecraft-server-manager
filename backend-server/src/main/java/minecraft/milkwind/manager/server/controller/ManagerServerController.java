@@ -10,6 +10,7 @@ import minecraft.milkwind.manager.server.dto.CustomCommandDto;
 import minecraft.milkwind.manager.server.dto.CustomCommandUpsertRequest;
 import minecraft.milkwind.manager.server.dto.ExecuteCommandRequest;
 import minecraft.milkwind.manager.server.dto.LogEntryDto;
+import minecraft.milkwind.manager.server.dto.PublicServerSummaryDto;
 import minecraft.milkwind.manager.server.dto.PlayerActionRequest;
 import minecraft.milkwind.manager.server.dto.PlayerActionResultDto;
 import minecraft.milkwind.manager.server.dto.PowerActionResultDto;
@@ -51,6 +52,11 @@ public class ManagerServerController {
     @GetMapping("/{serverId}/snapshot")
     public ApiResponse<ServerSnapshotDto> snapshot(@PathVariable String serverId) {
         return ApiResponse.success(serverCatalogService.getManagerSnapshot(serverId));
+    }
+
+    @GetMapping
+    public ApiResponse<List<PublicServerSummaryDto>> listServers() {
+        return ApiResponse.success(serverCatalogService.listPublicServers());
     }
 
     @GetMapping("/{serverId}/logs")

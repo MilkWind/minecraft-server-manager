@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Button } from 'animal-island-vue';
 import { useRoute } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import LoginModal from '@/components/LoginModal.vue';
@@ -19,7 +20,8 @@ const loginOpen = ref(false);
 const errorMessage = ref('');
 
 const sessionState = useSession();
-const snapshotState = useServerSnapshot(serverId, managerView);
+const managerAccess = computed(() => managerView.value && sessionState.isAuthenticated.value);
+const snapshotState = useServerSnapshot(serverId, managerAccess);
 
 onMounted(async () => {
   sessionState.selectServer(serverId.value);
@@ -27,17 +29,17 @@ onMounted(async () => {
   if (managerView.value && !sessionState.isAuthenticated.value) {
     loginOpen.value = true;
   }
-  snapshotState.startPolling(managerView.value ? 6000 : 8000);
+  snapshotState.startPolling(managerAccess.value ? 6000 : 8000);
 });
 
 onBeforeUnmount(() => {
   snapshotState.disposePolling();
 });
 
-watch([serverId, managerView], () => {
+watch([serverId, managerView, sessionState.isAuthenticated], () => {
   sessionState.selectServer(serverId.value);
   snapshotState.disposePolling();
-  snapshotState.startPolling(managerView.value ? 6000 : 8000);
+  snapshotState.startPolling(managerAccess.value ? 6000 : 8000);
 });
 
 function openLogin() {
@@ -147,12 +149,12 @@ async function logout() {
   >
     <template #header-actions>
       <div class="header-actions">
-        <button v-if="managerView && !sessionState.isAuthenticated.value" class="header-button" @click="openLogin">
+        <Button v-if="managerView && !sessionState.isAuthenticated.value" type="primary" @click="openLogin">
           管理员登录
-        </button>
-        <button v-if="managerView && sessionState.isAuthenticated.value" class="header-button" @click="logout">
+        </Button>
+        <Button v-if="managerView && sessionState.isAuthenticated.value" type="default" @click="logout">
           退出登录
-        </button>
+        </Button>
       </div>
     </template>
 
@@ -179,7 +181,7 @@ async function logout() {
 
     <LoginModal
       v-if="managerView"
-      v-model="loginOpen"
+      v-model:open="loginOpen"
       :server-id="serverId"
       @close="closeLogin"
       @success="onLoginSuccess"
@@ -193,22 +195,12 @@ async function logout() {
   gap: 12px;
 }
 
-.header-button {
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 18px;
-  background: #5b8f5a;
-  color: #fffdf3;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
 .error-banner {
   margin: 0 0 18px;
-  border-radius: 18px;
+  border-radius: var(--animal-border-radius-base);
   padding: 14px 16px;
-  background: rgba(185, 72, 53, 0.14);
-  color: #9a3326;
+  background: rgba(224, 90, 90, 0.14);
+  color: var(--animal-error-color);
+  font-weight: 700;
 }
 </style>

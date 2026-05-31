@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
+import { Input, Modal } from 'animal-island-vue';
 import { useSession } from '@/composables/useSession';
 
 const props = defineProps<{
   serverId: string;
-  open?: boolean;
-  modelValue?: boolean;
+  open: boolean;
 }>();
 
 const emit = defineEmits<{
   close: [];
   success: [];
-  'update:modelValue': [value: boolean];
+  'update:open': [value: boolean];
 }>();
 
 const { login, loading } = useSession();
@@ -20,8 +20,6 @@ const username = ref('admin');
 const password = ref('');
 const totpCode = ref('');
 const errorMessage = ref('');
-
-const isOpen = computed(() => props.open ?? props.modelValue ?? false);
 
 async function submit() {
   errorMessage.value = '';
@@ -36,109 +34,63 @@ async function submit() {
     password.value = '';
     totpCode.value = '';
     emit('success');
-    emit('update:modelValue', false);
+    emit('update:open', false);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '登录失败，请检查账号和验证码。';
+    errorMessage.value = error instanceof Error ? error.message : '登录失败，请检查账号、密码和验证码。';
   }
 }
 
 function close() {
   emit('close');
-  emit('update:modelValue', false);
+  emit('update:open', false);
 }
 </script>
 
 <template>
-  <div v-if="isOpen" class="login-backdrop" @click.self="close">
-    <section class="login-card" aria-label="管理员登录">
-      <header class="login-header">
-        <p class="eyebrow">Manager Access</p>
-        <h2>管理员登录</h2>
-        <p>请输入账号、密码和动态验证码后继续管理服务器。</p>
-      </header>
+  <Modal
+    :open="props.open"
+    title="管理员登录"
+    :mask-closable="true"
+    :show-footer="false"
+    :typewriter="true"
+    width="520"
+    @close="close"
+    @update:open="emit('update:open', $event)"
+  >
+    <p class="modal-copy">输入账号、密码和动态验证码后继续管理服务器。</p>
 
-      <form class="login-form" @submit.prevent="submit">
-        <label>
-          <span>账号</span>
-          <input v-model="username" autocomplete="username" placeholder="admin" />
-        </label>
+    <form class="login-form" @submit.prevent="submit">
+      <label>
+        <span>账号</span>
+        <Input v-model="username" placeholder="admin" />
+      </label>
 
-        <label>
-          <span>密码</span>
-          <input v-model="password" autocomplete="current-password" type="password" placeholder="请输入密码" />
-        </label>
+      <label>
+        <span>密码</span>
+        <Input v-model="password" type="password" placeholder="请输入密码" />
+      </label>
 
-        <label>
-          <span>动态验证码</span>
-          <input
-            v-model="totpCode"
-            autocomplete="one-time-code"
-            inputmode="numeric"
-            maxlength="6"
-            placeholder="6 位验证码"
-          />
-        </label>
+      <label>
+        <span>动态验证码</span>
+        <Input v-model="totpCode" :maxlength="6" placeholder="6 位验证码" />
+      </label>
 
-        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-        <footer class="login-actions">
-          <button class="ghost-button" type="button" @click="close">取消</button>
-          <button class="primary-button" type="submit" :disabled="loading">登录</button>
-        </footer>
-      </form>
-    </section>
-  </div>
+      <footer class="login-actions">
+        <button type="button" class="action-button action-button--secondary" @click="close">取消</button>
+        <button type="submit" class="action-button action-button--primary" :disabled="loading">
+          {{ loading ? '登录中...' : '登录' }}
+        </button>
+      </footer>
+    </form>
+  </Modal>
 </template>
 
 <style scoped>
-.login-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(31, 43, 32, 0.45);
-  backdrop-filter: blur(10px);
-}
-
-.login-card {
-  width: min(420px, 100%);
-  border: 2px solid #5b8f5a;
-  border-radius: 28px;
-  padding: 28px;
-  background: linear-gradient(145deg, #fff8df, #eaf7d7);
-  box-shadow: 0 24px 80px rgba(40, 69, 38, 0.28);
-}
-
-.login-header {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 22px;
-}
-
-.eyebrow {
-  margin: 0;
-  color: #5b8f5a;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.login-header h2,
-.login-header p {
-  margin: 0;
-}
-
-.login-header h2 {
-  color: #314c32;
-  font-size: 26px;
-}
-
-.login-header p {
-  color: #6d715d;
-  line-height: 1.6;
+.modal-copy {
+  margin: 0 0 18px;
+  color: var(--animal-text-color-secondary);
 }
 
 .login-form {
@@ -149,32 +101,16 @@ function close() {
 .login-form label {
   display: grid;
   gap: 8px;
-  color: #41533e;
+  color: var(--animal-warm-color-soft);
   font-weight: 700;
-}
-
-.login-form input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 2px solid rgba(91, 143, 90, 0.38);
-  border-radius: 16px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.74);
-  color: #263824;
-  font: inherit;
-  outline: none;
-}
-
-.login-form input:focus {
-  border-color: #5b8f5a;
 }
 
 .error-message {
   margin: 0;
-  border-radius: 14px;
+  border-radius: var(--animal-border-radius-base);
   padding: 10px 12px;
-  background: rgba(190, 68, 48, 0.12);
-  color: #9a3326;
+  background: rgba(224, 90, 90, 0.12);
+  color: var(--animal-error-color);
 }
 
 .login-actions {
@@ -184,28 +120,28 @@ function close() {
   margin-top: 8px;
 }
 
-.ghost-button,
-.primary-button {
+.action-button {
   border: 0;
   border-radius: 999px;
   padding: 10px 18px;
+  min-width: 96px;
   font: inherit;
   font-weight: 800;
   cursor: pointer;
 }
 
-.ghost-button {
-  background: rgba(91, 143, 90, 0.12);
+.action-button--secondary {
+  background: rgba(91, 143, 90, 0.14);
   color: #3f683f;
 }
 
-.primary-button {
-  background: #5b8f5a;
-  color: #fffdf1;
+.action-button--primary {
+  background: var(--animal-primary-color);
+  color: #fff;
 }
 
-.primary-button:disabled {
-  cursor: wait;
-  opacity: 0.65;
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 </style>

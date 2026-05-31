@@ -9,6 +9,8 @@ import minecraft.milkwind.manager.server.mapper.CustomCommandMapper;
 import minecraft.milkwind.manager.server.mapper.ServerConfigMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class DatabaseBootstrapService {
 
@@ -27,31 +29,53 @@ public class DatabaseBootstrapService {
     }
 
     public void ensureSeedData() {
-        long serverCount = serverConfigMapper.selectCount(new LambdaQueryWrapper<>());
-        if (serverCount == 0) {
-            for (AppProperties.ServerEntry entry : appProperties.getServers().getEntries()) {
-                ServerConfigEntity entity = new ServerConfigEntity();
-                entity.setServerId(entry.getId());
-                entity.setDisplayName(entry.getDisplayName());
-                entity.setRootDirectory(entry.getRootDirectory());
-                entity.setJvmArguments(entry.getJvmArguments());
-                entity.setPublicAddress(entry.getPublicAddress());
-                entity.setGameVersion(entry.getGameVersion());
-                entity.setChatEnabled(entry.isChatEnabled());
-                entity.setStatus("STOPPED");
-                entity.setCreatedAt(TimeSupport.nowIso());
-                entity.setUpdatedAt(TimeSupport.nowIso());
-                serverConfigMapper.insert(entity);
-            }
+        for (AppProperties.ServerEntry entry : appProperties.getServers().getEntries()) {
+            ensureServerSeed(entry);
         }
 
-        long commandCount = customCommandMapper.selectCount(new LambdaQueryWrapper<>());
-        if (commandCount == 0) {
-            for (ServerConfigEntity server : serverConfigMapper.selectList(new LambdaQueryWrapper<>())) {
-                insertCommand(server.getServerId(), "Save World", "save-all", "Trigger an immediate world save", "admin");
-                insertCommand(server.getServerId(), "List Players", "list", "Query the current online player list", "admin");
-            }
+        for (AppProperties.ServerEntry entry : appProperties.getServers().getEntries()) {
+            ensureCommandSeed(entry.getId());
         }
+    }
+
+    private void ensureServerSeed(AppProperties.ServerEntry entry) {
+        ServerConfigEntity entity = serverConfigMapper.selectById(entry.getId());
+        if (entity == null) {
+            entity = new ServerConfigEntity();
+            entity.setServerId(entry.getId());
+            entity.setStatus("STOPPED");
+            entity.setCreatedAt(TimeSupport.nowIso());
+        }
+
+        entity.setDisplayName(entry.getDisplayName());
+        entity.setRootDirectory(entry.getRootDirectory());
+        entity.setJvmArguments(entry.getJvmArguments());
+        entity.setPublicAddress(entry.getPublicAddress());
+        entity.setGameVersion(entry.getGameVersion());
+        entity.setChatEnabled(entry.isChatEnabled());
+        entity.setUpdatedAt(TimeSupport.nowIso());
+
+        if (entity.getCreatedAt() == null) {
+            entity.setCreatedAt(TimeSupport.nowIso());
+        }
+
+        if (serverConfigMapper.selectById(entry.getId()) == null) {
+            serverConfigMapper.insert(entity);
+        } else {
+            serverConfigMapper.updateById(entity);
+        }
+    }
+
+    private void ensureCommandSeed(String serverId) {
+        long commandCount = customCommandMapper.selectCount(
+                new LambdaQueryWrapper<CustomCommandEntity>().eq(CustomCommandEntity::getServerId, serverId)
+        );
+        if (commandCount > 0) {
+            return;
+        }
+
+        insertCommand(serverId, "Save World", "save-all", "Trigger an immediate world save", "admin");
+        insertCommand(serverId, "List Players", "list", "Query the current online player list", "admin");
     }
 
     private void insertCommand(String serverId, String displayName, String commandText, String description, String createdBy) {

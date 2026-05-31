@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Card, Footer, Time } from 'animal-island-vue';
+
 defineProps<{
   title: string;
   subtitle?: string;
@@ -9,29 +11,38 @@ defineProps<{
 <template>
   <div class="app-shell">
     <header class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">{{ managerMode ? 'Manager Console' : 'Visitor View' }}</p>
-        <h1>{{ title }}</h1>
-        <p v-if="subtitle">{{ subtitle }}</p>
+      <Card type="title" class="hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">{{ managerMode ? 'Manager Console' : 'Visitor View' }}</p>
+          <h1>{{ title }}</h1>
+          <p v-if="subtitle">{{ subtitle }}</p>
+        </div>
+      </Card>
+      <div class="hero-tools">
+        <Time />
+        <slot name="header-actions" />
       </div>
-      <slot name="header-actions" />
     </header>
 
     <main class="content">
       <slot />
     </main>
+
+    <Footer type="tree" class="app-footer" />
   </div>
 </template>
 
 <style scoped>
 .app-shell {
+  position: relative;
+  overflow: hidden;
   min-height: 100vh;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgba(246, 222, 123, 0.6), transparent 32%),
-    radial-gradient(circle at top right, rgba(115, 177, 112, 0.4), transparent 26%),
-    linear-gradient(180deg, #f7f2d6 0%, #e8f6df 54%, #d7ecdf 100%);
-  color: #304431;
+    linear-gradient(180deg, rgba(247, 243, 223, 0.92), rgba(230, 249, 246, 0.78)),
+    url('@/assets/hero.png') center top / cover fixed;
+  color: var(--animal-text-color);
+  font-family: var(--animal-font-family);
 }
 
 .hero {
@@ -41,11 +52,10 @@ defineProps<{
   align-items: flex-start;
   margin: 0 auto 24px;
   max-width: 1240px;
-  padding: 28px;
-  border: 2px solid rgba(91, 143, 90, 0.34);
-  border-radius: 32px;
-  background: rgba(255, 252, 241, 0.76);
-  box-shadow: 0 20px 60px rgba(39, 68, 36, 0.12);
+}
+
+.hero-card {
+  flex: 1;
 }
 
 .hero-copy {
@@ -61,24 +71,43 @@ defineProps<{
 .hero-copy h1 {
   font-size: clamp(32px, 4vw, 50px);
   line-height: 1.04;
+  color: var(--animal-warm-color-soft);
 }
 
 .hero-copy p {
-  color: #657364;
+  color: var(--animal-text-color-secondary);
   line-height: 1.6;
 }
 
 .eyebrow {
-  color: #5b8f5a;
+  color: var(--animal-primary-color);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
+.hero-tools {
+  display: grid;
+  justify-items: end;
+  gap: 14px;
+}
+
 .content {
+  position: relative;
+  z-index: 1;
   margin: 0 auto;
   max-width: 1240px;
+  padding-bottom: 130px;
+}
+
+.app-footer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {
@@ -88,7 +117,11 @@ defineProps<{
 
   .hero {
     flex-direction: column;
-    padding: 22px;
+  }
+
+  .hero-tools {
+    width: 100%;
+    justify-items: start;
   }
 }
 </style>

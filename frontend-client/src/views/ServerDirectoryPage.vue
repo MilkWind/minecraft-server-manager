@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { Button, Card, Input, Loading } from 'animal-island-vue';
 import { RouterLink } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import CreateServerModal from '@/components/CreateServerModal.vue';
@@ -12,33 +13,53 @@ const directory = useServerDirectory();
 const sessionState = useSession();
 const showCreate = ref(false);
 const showLogin = ref(false);
-const pendingCreateAfterLogin = ref(false);
-const loginServerId = ref('');
+const loginServerId = ref('MilkWind');
 const errorMessage = ref('');
+
+const hasManagerAccess = computed(() => sessionState.isAuthenticated.value);
 
 onMounted(async () => {
   await sessionState.loadCurrentSession();
-  await directory.loadServers();
-  const storedServerId = sessionState.selectedServerId.value;
-  loginServerId.value = storedServerId || directory.servers.value[0]?.serverId || '';
+  loginServerId.value = sessionState.selectedServerId.value || 'MilkWind';
+  if (hasManagerAccess.value) {
+    await directory.loadServers();
+  } else {
+    directory.clearServers();
+  }
+});
+
+watch(hasManagerAccess, async (isAuthenticated, wasAuthenticated) => {
+  if (isAuthenticated && !wasAuthenticated) {
+    loginServerId.value = sessionState.selectedServerId.value || loginServerId.value || 'MilkWind';
+    await directory.loadServers();
+  }
+
+  if (!isAuthenticated && wasAuthenticated) {
+    directory.clearServers();
+  }
 });
 
 function openCreateFlow() {
-  if (sessionState.isAuthenticated.value) {
-    showCreate.value = true;
+  if (!hasManagerAccess.value) {
     return;
   }
 
-  pendingCreateAfterLogin.value = true;
+  showCreate.value = true;
+}
+
+function openLogin() {
+  if (!loginServerId.value.trim()) {
+    errorMessage.value = '请输入要登录的 serverId。';
+    return;
+  }
+
+  errorMessage.value = '';
   showLogin.value = true;
 }
 
 function onLoginSuccess() {
   showLogin.value = false;
-  if (pendingCreateAfterLogin.value) {
-    pendingCreateAfterLogin.value = false;
-    showCreate.value = true;
-  }
+  loginServerId.value = sessionState.selectedServerId.value || loginServerId.value;
 }
 
 async function createServer(payload: CreateManagedServerRequest) {
@@ -56,27 +77,41 @@ async function createServer(payload: CreateManagedServerRequest) {
 <template>
   <AppShell
     title="服务器目录"
-    subtitle="选择公开查看入口，或为受管服务器建立新的目录记录。"
+    subtitle="管理员登录后可查看全部服务器并创建新服务器。访客请直接打开对应服务器的 visitor 路由。"
   >
     <template #header-actions>
-      <button class="create-button" @click="openCreateFlow">创建受管服务器</button>
+      <Button v-if="hasManagerAccess" type="primary" size="large" @click="openCreateFlow">创建受管服务器</Button>
     </template>
 
     <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
+    <Loading :active="directory.loading.value" />
 
-    <section class="server-grid">
-      <article v-for="server in directory.servers.value" :key="server.serverId" class="server-card">
+    <section v-if="hasManagerAccess" class="server-grid">
+      <Card v-for="server in directory.servers.value" :key="server.serverId" class="server-card">
         <p class="card-status">{{ server.status }}</p>
         <h3>{{ server.displayName }}</h3>
         <p>{{ server.publicAddress }}</p>
         <p>版本：{{ server.gameVersion }}</p>
         <p>在线人数：{{ server.onlinePlayerCount }}</p>
         <div class="card-actions">
-          <RouterLink :to="`/servers/${server.serverId}/visitor`">访客视图</RouterLink>
-          <RouterLink :to="`/servers/${server.serverId}/manager`">管理视图</RouterLink>
+          <RouterLink :to="`/servers/${server.serverId}/visitor`" custom v-slot="{ navigate }">
+            <Button type="default" @click="navigate">访客视图</Button>
+          </RouterLink>
+          <RouterLink :to="`/servers/${server.serverId}/manager`" custom v-slot="{ navigate }">
+            <Button type="primary" @click="navigate">管理视图</Button>
+          </RouterLink>
         </div>
-      </article>
+      </Card>
     </section>
+
+    <Card v-else class="auth-card">
+      <h3>管理员登录</h3>
+      <p>输入目标 serverId 后登录，登录成功后才会显示全部服务器。</p>
+      <Input v-model="loginServerId" placeholder="例如：MilkWind" />
+      <div class="auth-actions">
+        <Button type="primary" :disabled="!loginServerId.trim()" @click="openLogin">继续登录</Button>
+      </div>
+    </Card>
 
     <CreateServerModal
       v-model="showCreate"
@@ -86,9 +121,8 @@ async function createServer(payload: CreateManagedServerRequest) {
     />
 
     <LoginModal
-      v-if="loginServerId"
-      v-model="showLogin"
-      :server-id="loginServerId"
+      v-model:open="showLogin"
+      :server-id="loginServerId.trim()"
       @close="showLogin = false"
       @success="onLoginSuccess"
     />
@@ -96,23 +130,13 @@ async function createServer(payload: CreateManagedServerRequest) {
 </template>
 
 <style scoped>
-.create-button {
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 18px;
-  background: #5b8f5a;
-  color: #fffdf3;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
 .error-banner {
   margin: 0 0 18px;
-  border-radius: 18px;
+  border-radius: var(--animal-border-radius-base);
   padding: 14px 16px;
-  background: rgba(185, 72, 53, 0.14);
-  color: #9a3326;
+  background: rgba(224, 90, 90, 0.14);
+  color: var(--animal-error-color);
+  font-weight: 700;
 }
 
 .server-grid {
@@ -121,24 +145,23 @@ async function createServer(payload: CreateManagedServerRequest) {
   gap: 18px;
 }
 
+.auth-card,
 .server-card {
   display: grid;
   gap: 12px;
-  border: 2px solid rgba(91, 143, 90, 0.28);
-  border-radius: 28px;
-  padding: 20px;
-  background: rgba(255, 252, 243, 0.84);
 }
 
+.auth-card h3,
+.auth-card p,
 .server-card h3,
 .server-card p {
   margin: 0;
 }
 
 .card-status {
-  color: #5b8f5a;
+  color: var(--animal-primary-color);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -149,12 +172,8 @@ async function createServer(payload: CreateManagedServerRequest) {
   flex-wrap: wrap;
 }
 
-.card-actions a {
-  border-radius: 999px;
-  padding: 10px 14px;
-  background: rgba(91, 143, 90, 0.14);
-  color: #3f683f;
-  font-weight: 800;
-  text-decoration: none;
+.auth-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
