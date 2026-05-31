@@ -93,7 +93,8 @@ Important rule:
 
 - Route structure is only a navigation model
 - Route structure is not a security boundary
-- Backend authorization must be enforced on every manager API request for the target `serverId`
+- Backend authentication must be enforced on every manager API request
+- Backend must validate that the target `serverId` exists and is valid for the request
 
 Frontend directives that hide manager UI are only for user experience. They do not provide security.
 
@@ -123,7 +124,7 @@ The manager login flow is:
 Authorization rules:
 
 - Every manager API must validate authentication
-- Every manager API must validate authorization for the target `serverId`
+- Every manager API must validate the target `serverId` or command identity where applicable
 - Visitor APIs must expose only public data
 - Manager-only data and actions must never be protected by frontend logic alone
 
@@ -283,7 +284,7 @@ Even though all managers are trusted, the backend should still validate:
 
 - Command belongs to the selected server
 - Manager is authenticated
-- Manager request targets an allowed server
+- Manager request targets an existing server
 
 ## 16. API Design Rules
 
@@ -351,7 +352,7 @@ This design is intentionally lightweight and optimized for a small trusted deplo
 
 The critical implementation rules are:
 
-- Backend authorization is enforced per request and per server
+- Backend authentication is enforced per request, and target `serverId` validity is checked per request
 - Manager features are never protected only by hidden frontend UI
 - Custom commands are restricted to Minecraft console input only
 - Visitor access is read-only and limited to public-safe information

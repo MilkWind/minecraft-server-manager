@@ -116,7 +116,7 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
 
   function executeConsoleCommand(command: string) {
     return runBusyAction(() =>
-      apiRequest(`${basePath()}/console`, {
+      apiRequest(`${basePath()}/commands/execute`, {
         method: 'POST',
         body: JSON.stringify({ command }),
       }),

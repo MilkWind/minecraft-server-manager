@@ -131,7 +131,7 @@ Close the gap between the design requirement and the current authentication scaf
    - Avoid leaking sensitive auth details in messages
 
 4. Review manager-only endpoint coverage.
-   - Confirm every manager API checks authentication and server scope consistently
+   - Confirm every manager API checks authentication and target server existence consistently
    - Confirm public endpoints never call manager-only DTO builders
 
 ### 5.3 Deliverables
