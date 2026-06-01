@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Input, Modal } from 'animal-island-vue';
+import { Button, Input, Modal } from 'animal-island-vue';
 import { useSession } from '@/composables/useSession';
 
 const props = defineProps<{
@@ -78,10 +78,10 @@ function close() {
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
       <footer class="login-actions">
-        <button type="button" class="action-button action-button--secondary" @click="close">取消</button>
-        <button type="submit" class="action-button action-button--primary" :disabled="loading">
+        <Button type="default" html-type="button" @click="close">取消</Button>
+        <Button type="primary" html-type="submit" :loading="loading">
           {{ loading ? '登录中...' : '登录' }}
-        </button>
+        </Button>
       </footer>
     </form>
   </Modal>
@@ -118,30 +118,5 @@ function close() {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 8px;
-}
-
-.action-button {
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 18px;
-  min-width: 96px;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.action-button--secondary {
-  background: rgba(91, 143, 90, 0.14);
-  color: #3f683f;
-}
-
-.action-button--primary {
-  background: var(--animal-primary-color);
-  color: #fff;
-}
-
-.action-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
 }
 </style>
