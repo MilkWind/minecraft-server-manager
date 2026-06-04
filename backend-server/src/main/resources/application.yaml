@@ -16,11 +16,9 @@ mybatis-plus:
 app:
   auth:
     session-ttl-hours: 8
-    bootstrap-manager:
-      username: admin
-      display-name: 管理员
-      password: admin123456
-      totp-secret: JBSWY3DPEHPK3PXP
+    manager-registration:
+      verification-code: ""
+      is-enable: false
   servers:
     poll-interval-seconds: 8
     list-refresh-interval-seconds: 15
@@ -37,3 +35,9 @@ app:
         jvm-arguments: -Xms2G -Xmx3G
         public-address: starjourney.local:25566
         game-version: 1.21.1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

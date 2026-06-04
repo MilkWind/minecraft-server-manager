@@ -2,7 +2,6 @@ package minecraft.milkwind.manager.server.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PostConstruct;
-import minecraft.milkwind.manager.auth.service.ManagerBootstrapService;
 import minecraft.milkwind.manager.common.exception.ApiException;
 import minecraft.milkwind.manager.server.dto.ConsoleCommandResultDto;
 import minecraft.milkwind.manager.server.dto.CustomCommandDto;
@@ -34,7 +33,6 @@ public class ServerCatalogService {
     private final ServerConfigMapper serverConfigMapper;
     private final CustomCommandMapper customCommandMapper;
     private final DatabaseBootstrapService databaseBootstrapService;
-    private final ManagerBootstrapService managerBootstrapService;
     private final ServerProcessService serverProcessService;
     private final ServerMetricsService serverMetricsService;
     private final ServerAssetService serverAssetService;
@@ -43,7 +41,6 @@ public class ServerCatalogService {
             ServerConfigMapper serverConfigMapper,
             CustomCommandMapper customCommandMapper,
             DatabaseBootstrapService databaseBootstrapService,
-            ManagerBootstrapService managerBootstrapService,
             ServerProcessService serverProcessService,
             ServerMetricsService serverMetricsService,
             ServerAssetService serverAssetService
@@ -51,7 +48,6 @@ public class ServerCatalogService {
         this.serverConfigMapper = serverConfigMapper;
         this.customCommandMapper = customCommandMapper;
         this.databaseBootstrapService = databaseBootstrapService;
-        this.managerBootstrapService = managerBootstrapService;
         this.serverProcessService = serverProcessService;
         this.serverMetricsService = serverMetricsService;
         this.serverAssetService = serverAssetService;
@@ -59,7 +55,6 @@ public class ServerCatalogService {
 
     @PostConstruct
     public void initialize() {
-        managerBootstrapService.ensureBootstrapManager();
         databaseBootstrapService.ensureSeedData();
     }
 

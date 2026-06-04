@@ -49,7 +49,7 @@ function openCreateFlow() {
 
 function openLogin() {
   if (!loginServerId.value.trim()) {
-    errorMessage.value = '请输入要登录的 serverId。';
+    errorMessage.value = 'Enter the target server ID before opening manager sign-in.';
     return;
   }
 
@@ -69,18 +69,18 @@ async function createServer(payload: CreateManagedServerRequest) {
     await directory.createManagedServer(payload);
     showCreate.value = false;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '创建服务器失败。';
+    errorMessage.value = error instanceof Error ? error.message : 'Creating the managed server failed.';
   }
 }
 </script>
 
 <template>
   <AppShell
-    title="服务器目录"
-    subtitle="管理员登录后可查看全部服务器并创建新服务器。访客请直接打开对应服务器的 visitor 路由。"
+    title="Server Directory"
+    subtitle="Managers can sign in here after binding a private manager-registration link. Visitors can open any visitor route directly."
   >
     <template #header-actions>
-      <Button v-if="hasManagerAccess" type="primary" size="large" @click="openCreateFlow">创建受管服务器</Button>
+      <Button v-if="hasManagerAccess" type="primary" size="large" @click="openCreateFlow">Create Managed Server</Button>
     </template>
 
     <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
@@ -91,25 +91,28 @@ async function createServer(payload: CreateManagedServerRequest) {
         <p class="card-status">{{ server.status }}</p>
         <h3>{{ server.displayName }}</h3>
         <p>{{ server.publicAddress }}</p>
-        <p>版本：{{ server.gameVersion }}</p>
-        <p>在线人数：{{ server.onlinePlayerCount }}</p>
+        <p>Version: {{ server.gameVersion }}</p>
+        <p>Players Online: {{ server.onlinePlayerCount }}</p>
         <div class="card-actions">
           <RouterLink :to="`/servers/${server.serverId}/visitor`" custom v-slot="{ navigate }">
-            <Button type="default" @click="navigate">访客视图</Button>
+            <Button type="default" @click="navigate">Visitor View</Button>
           </RouterLink>
           <RouterLink :to="`/servers/${server.serverId}/manager`" custom v-slot="{ navigate }">
-            <Button type="primary" @click="navigate">管理视图</Button>
+            <Button type="primary" @click="navigate">Manager View</Button>
           </RouterLink>
         </div>
       </Card>
     </section>
 
     <Card v-else class="auth-card">
-      <h3>管理员登录</h3>
-      <p>输入目标 serverId 后登录，登录成功后才会显示全部服务器。</p>
-      <Input v-model="loginServerId" placeholder="例如：MilkWind" />
+      <h3>Manager Sign In</h3>
+      <p>
+        Use the username, password, and authenticator code from your private manager registration flow. Choose the server you
+        want to manage after sign-in.
+      </p>
+      <Input v-model="loginServerId" placeholder="server ID, for example MilkWind" />
       <div class="auth-actions">
-        <Button type="primary" :disabled="!loginServerId.trim()" @click="openLogin">继续登录</Button>
+        <Button type="primary" :disabled="!loginServerId.trim()" @click="openLogin">Continue to Sign In</Button>
       </div>
     </Card>
 
