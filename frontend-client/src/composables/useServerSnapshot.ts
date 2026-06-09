@@ -18,11 +18,11 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
   const loading = ref(false);
   const busy = ref(false);
   const pollTimer = ref<number | null>(null);
+  let pollIteration = 0;
 
   const onlinePlayers = computed(() => snapshot.value?.onlinePlayers ?? []);
   const mods = computed(() => snapshot.value?.mods ?? []);
   const datapacks = computed(() => snapshot.value?.datapacks ?? []);
-  const resourcePacks = computed(() => snapshot.value?.resourcePacks ?? []);
   const chatMessages = computed(() => snapshot.value?.chatMessages ?? []);
   const customCommands = computed<CustomCommand[]>(() => snapshot.value?.customCommands ?? []);
   let currentPollingIntervalMs = 8000;
@@ -71,11 +71,16 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
 
   function startPolling(intervalMs = 8000) {
     currentPollingIntervalMs = intervalMs;
+    pollIteration = 0;
     stopPolling();
     void refreshAll();
     pollTimer.value = window.setInterval(() => {
       if (!document.hidden) {
-        void refreshAll();
+        pollIteration += 1;
+        void loadSnapshot();
+        if (resolvedManagerView() && pollIteration % 5 === 0) {
+          void loadLogs();
+        }
       }
     }, intervalMs);
 
@@ -211,7 +216,6 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
     onlinePlayers,
     mods,
     datapacks,
-    resourcePacks,
     chatMessages,
     customCommands,
     loadSnapshot,

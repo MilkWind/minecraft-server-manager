@@ -36,6 +36,7 @@ public class ServerCatalogService {
     private final ServerProcessService serverProcessService;
     private final ServerMetricsService serverMetricsService;
     private final ServerAssetService serverAssetService;
+    private final ServerLogService serverLogService;
 
     public ServerCatalogService(
             ServerConfigMapper serverConfigMapper,
@@ -43,7 +44,8 @@ public class ServerCatalogService {
             DatabaseBootstrapService databaseBootstrapService,
             ServerProcessService serverProcessService,
             ServerMetricsService serverMetricsService,
-            ServerAssetService serverAssetService
+            ServerAssetService serverAssetService,
+            ServerLogService serverLogService
     ) {
         this.serverConfigMapper = serverConfigMapper;
         this.customCommandMapper = customCommandMapper;
@@ -51,6 +53,7 @@ public class ServerCatalogService {
         this.serverProcessService = serverProcessService;
         this.serverMetricsService = serverMetricsService;
         this.serverAssetService = serverAssetService;
+        this.serverLogService = serverLogService;
     }
 
     @PostConstruct
@@ -86,30 +89,7 @@ public class ServerCatalogService {
 
     public List<LogEntryDto> getFullLogs(String serverId) {
         ServerConfigEntity config = requireServerConfig(serverId);
-        ServerRuntimeState runtime = serverProcessService.snapshotRuntime(config);
-        List<LogEntryDto> logs = runtime.getRecentLines().stream()
-                .map(line -> new LogEntryDto(
-                        UUID.randomUUID().toString(),
-                        line.timestamp(),
-                        line.level(),
-                        line.source(),
-                        line.message(),
-                        false
-                ))
-                .toList();
-
-        if (!logs.isEmpty()) {
-            return logs;
-        }
-
-        return List.of(new LogEntryDto(
-                UUID.randomUUID().toString(),
-                Instant.now(),
-                "INFO",
-                "manager",
-                "Server logs will appear here after the managed process produces output.",
-                false
-        ));
+        return serverLogService.readLogs(config);
     }
 
     public PowerActionResultDto runPowerAction(String serverId, String action) {
@@ -227,7 +207,6 @@ public class ServerCatalogService {
                 players,
                 serverAssetService.listMods(config),
                 serverAssetService.listDatapacks(config),
-                serverAssetService.listResourcePacks(config),
                 publicChatMessages,
                 metrics,
                 runtime.isRestartRecommended(),

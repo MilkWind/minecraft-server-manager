@@ -82,17 +82,6 @@ const metricsRows = computed(() =>
       </ul>
       <p v-else class="empty-text">没有发现数据包。</p>
     </Card>
-
-    <Card class="panel">
-      <h3>资源包</h3>
-      <ul v-if="snapshot.resourcePacks.length" class="asset-list">
-        <li v-for="asset in snapshot.resourcePacks" :key="asset.id">
-          <span>{{ asset.name }}</span>
-          <strong>{{ asset.enabled ? '启用' : '停用' }}</strong>
-        </li>
-      </ul>
-      <p v-else class="empty-text">没有发现资源包。</p>
-    </Card>
   </section>
 
   <Card v-else class="empty-state">

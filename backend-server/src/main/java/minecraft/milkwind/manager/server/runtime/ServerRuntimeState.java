@@ -21,7 +21,6 @@ public class ServerRuntimeState {
     private volatile ServerRuntimeMetrics metrics = ServerRuntimeMetrics.empty();
     private volatile boolean restartRecommended;
     private final AtomicLong generationCounter = new AtomicLong();
-    private final Deque<RuntimeLogLine> recentLines = new ConcurrentLinkedDeque<>();
     private final Deque<RuntimeLogLine> recentChatLines = new ConcurrentLinkedDeque<>();
     private final Set<String> onlinePlayers = new LinkedHashSet<>();
 
@@ -95,10 +94,6 @@ public class ServerRuntimeState {
         this.restartRecommended = restartRecommended;
     }
 
-    public Deque<RuntimeLogLine> getRecentLines() {
-        return recentLines;
-    }
-
     public Deque<RuntimeLogLine> getRecentChatLines() {
         return recentChatLines;
     }
@@ -125,14 +120,6 @@ public class ServerRuntimeState {
         lastListRefreshAt = null;
         metrics = ServerRuntimeMetrics.empty();
         restartRecommended = false;
-    }
-
-    public void appendLine(String level, String source, String line) {
-        RuntimeLogLine runtimeLine = new RuntimeLogLine(Instant.now(), level, source, line);
-        recentLines.addFirst(runtimeLine);
-        while (recentLines.size() > 200) {
-            recentLines.removeLast();
-        }
     }
 
     public void appendChatLine(String level, String source, String line) {

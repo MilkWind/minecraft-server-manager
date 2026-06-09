@@ -12,7 +12,6 @@ public record ServerSnapshotDto(
         List<PlayerDto> onlinePlayers,
         List<ManagedAssetDto> mods,
         List<ManagedAssetDto> datapacks,
-        List<ManagedAssetDto> resourcePacks,
         List<LogEntryDto> chatMessages,
         ServerMetricsDto metrics,
         boolean restartRecommended,

@@ -79,7 +79,6 @@ watch(
 const assets = computed(() => [
   ...(props.snapshot?.mods ?? []),
   ...(props.snapshot?.datapacks ?? []),
-  ...(props.snapshot?.resourcePacks ?? []),
 ]);
 
 const commands = computed<CustomCommand[]>(() => props.snapshot?.customCommands ?? []);

@@ -99,7 +99,6 @@ export interface ServerSnapshot {
   onlinePlayers: Player[];
   mods: ManagedAsset[];
   datapacks: ManagedAsset[];
-  resourcePacks: ManagedAsset[];
   chatMessages: LogEntry[];
   metrics: ServerMetrics;
   restartRecommended: boolean;

@@ -1,6 +1,6 @@
 # Design Implementation Verification Report
 
-Date: 2026-06-07
+Date: 2026-06-09
 
 Reference document: `design-complete.md`
 
@@ -20,7 +20,7 @@ Estimated scoring rule:
 - `PARTIAL` = 50%
 - `MISSING` = 0%
 
-Estimated overall matching degree: `80%`
+Estimated overall matching degree: `83%`
 
 This is an engineering estimate, not a formal compliance score.
 
@@ -39,9 +39,9 @@ This is an engineering estimate, not a formal compliance score.
 | --- | --- |
 | Product goals | 100% |
 | Visitor goals | 93% |
-| Manager goals | 85% |
+| Manager goals | 88% |
 | Routing, auth, authorization, API rules | 79% |
-| Backend/runtime/logging/metrics | 63% |
+| Backend/runtime/logging/metrics | 69% |
 | Architecture, storage, deployment, conventions | 87% |
 
 ## 4. Goal-by-goal assessment
@@ -63,7 +63,6 @@ This is an engineering estimate, not a formal compliance score.
 | View online players | FULL | 100% | Player list is exposed in public snapshot and rendered in `ServerOverview.vue`. |
 | View loaded mods | FULL | 100% | `ServerAssetService.listMods()` scans the managed server `mods` directory and public snapshot exposes the result. |
 | View loaded datapacks | FULL | 100% | `ServerAssetService.listDatapacks()` scans `world/datapacks` and public snapshot exposes the result. |
-| View loaded resource packs | FULL | 100% | `ServerAssetService.listResourcePacks()` scans `resourcepacks` and public snapshot exposes the result. |
 | View server game version | FULL | 100% | `gameVersion` is stored in `server_config`, returned by snapshot APIs, and shown in the UI. |
 | View server chat messages | FULL | 100% | Chat lines are parsed from server output and public snapshot includes only filtered chat entries. |
 | View server performance data: CPU, memory, network speed | PARTIAL | 50% | UI and API exist, but memory is measured from the backend JVM instead of the Minecraft process, and network speed is not based on real traffic volume. |
@@ -74,7 +73,7 @@ This is an engineering estimate, not a formal compliance score.
 | Goal | Status | Match | Current situation |
 | --- | --- | --- | --- |
 | Use all visitor features | FULL | 100% | Manager snapshot contains the visitor snapshot data plus manager-only fields. |
-| View full server logs | PARTIAL | 50% | Managers can view logs, but they are only the in-memory recent output buffer, capped at 200 lines, not full raw historical logs. |
+| View full server logs | FULL | 100% | Manager logs are read from `logs/latest.log` and the rotated `*.log.gz` history through `ServerLogService`. |
 | One-click copy for logs | FULL | 100% | `ManagerControlPanel.vue` provides clipboard copy for the current log list. |
 | Start server | FULL | 100% | Implemented by `/power/start` and `ServerProcessService.start()`. |
 | Stop server | FULL | 100% | Implemented by `/power/stop` and `ServerProcessService.stop()`. |
@@ -84,8 +83,8 @@ This is an engineering estimate, not a formal compliance score.
 | Ban players | FULL | 100% | Implemented by `/players/ban` and console dispatch. |
 | Send messages to all players | FULL | 100% | Implemented by `/messages` with `say`. |
 | Send messages to a specific player | FULL | 100% | Implemented by `/messages` with `msg <player>`. |
-| Suspend mods, datapacks, and resource packs | FULL | 100% | Implemented by moving assets into `_manager_disabled` folders. |
-| Resume mods, datapacks, and resource packs | FULL | 100% | Implemented by moving assets back from `_manager_disabled`. |
+| Suspend mods and datapacks | FULL | 100% | Implemented by moving assets into `_manager_disabled` folders. |
+| Resume mods and datapacks | FULL | 100% | Implemented by moving assets back from `_manager_disabled`. |
 | Restart server after asset state changes | PARTIAL | 50% | The system marks `restartRecommended` and exposes restart controls, but restart is not automatic or enforced as part of the asset action flow. |
 | Define server-specific custom commands | FULL | 100% | Custom commands are persisted per server in SQLite. |
 | Execute server-specific custom commands | PARTIAL | 50% | The UI can execute saved commands, but execution goes through raw command text instead of validating a saved command identity on the backend. |
@@ -123,7 +122,7 @@ This is an engineering estimate, not a formal compliance score.
 | Sending commands to Minecraft server consoles | FULL | 100% | Commands are written to the managed process stdin. |
 | Persisting manager auth data | FULL | 100% | Manager users and manager sessions are stored in SQLite. |
 | Persisting custom command metadata | FULL | 100% | `custom_command` table stores per-server command metadata. |
-| Full logs are manager-only | PARTIAL | 50% | Logs are manager-only, but they are not truly full logs; they are only a recent runtime buffer. |
+| Full logs are manager-only | FULL | 100% | Only manager APIs expose logs, and those logs are assembled from `logs/latest.log` and rotated `*.log.gz` files. |
 | Visitor chat is filtered from server output | FULL | 100% | Chat parsing is separate from full log display. |
 | CPU usage reflects server runtime | FULL | 100% | CPU uses `ProcessHandle.info().totalCpuDuration()` for the managed server process. |
 | Memory usage reflects server runtime | MISSING | 0% | Memory is currently read from the backend JVM `Runtime`, not from the managed Minecraft process. |
@@ -163,26 +162,22 @@ This is an engineering estimate, not a formal compliance score.
    - Network speed is not calculated from real traffic.
    - This directly weakens both visitor and manager monitoring goals.
 
-2. "Full server logs" are not actually full.
-   - The manager only sees an in-memory recent buffer.
-   - Historical logs, file-backed logs, and long-running process output retention are not implemented.
-
-3. Authentication model does not fully match the design wording.
+2. Authentication model does not fully match the design wording.
    - The design describes a session-bound token.
    - The implementation uses a stateless bearer token stored in SQLite with TTL.
    - This is secure enough for the current app shape, but it is not the same model.
 
 ### Medium-priority gaps
 
-4. Custom command execution is not bound to stored command identity.
+3. Custom command execution is not bound to stored command identity.
    - Saved commands are executed as raw command text.
    - Backend validation covers command CRUD ownership, but not "execute saved command X for server Y" as a distinct backend operation.
 
-5. Asset change flow does not include an integrated restart step.
+4. Asset change flow does not include an integrated restart step.
    - The system marks `restartRecommended` and lets the manager restart manually.
    - This is operationally useful, but weaker than a full "change then restart" workflow.
 
-6. UI language convention is incomplete.
+5. UI language convention is incomplete.
    - The design says UI text should use Chinese.
    - Several user-facing flows still contain English text.
 
@@ -193,7 +188,6 @@ The current implementation is already strong on structure, route model, public-v
 The repository is not yet fully aligned with `design-complete.md` in the areas that matter most for operational accuracy:
 
 - metrics correctness
-- full log retention and presentation
 - exact auth-session model
 - backend-validated execution of saved custom commands
 

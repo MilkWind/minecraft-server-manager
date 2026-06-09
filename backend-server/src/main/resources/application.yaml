@@ -8,34 +8,31 @@ spring:
     init:
       mode: always
       schema-locations: classpath:schema.sql
-
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-
 app:
   auth:
     session-ttl-hours: 8
     manager-registration:
-      verification-code: ""
+      verification-code: '399190'
       is-enable: false
   servers:
     poll-interval-seconds: 8
     list-refresh-interval-seconds: 15
     entries:
-      - id: MilkWind
-        display-name: MilkWind
-        root-directory: D:/minecraft/servers/MilkWind
-        jvm-arguments: -Xms2G -Xmx4G
-        public-address: milkwind.local:25565
-        game-version: 1.21.1
-      - id: StarJourney
-        display-name: StarJourney
-        root-directory: D:/minecraft/servers/StarJourney
-        jvm-arguments: -Xms2G -Xmx3G
-        public-address: starjourney.local:25566
-        game-version: 1.21.1
-
+    - id: MilkWind
+      display-name: MilkWind
+      root-directory: D:/minecraft/servers/MilkWind
+      jvm-arguments: -Xms2G -Xmx4G
+      public-address: milkwind.local:25565
+      game-version: 1.21.1
+    - id: StarJourney
+      display-name: StarJourney
+      root-directory: D:/minecraft/servers/StarJourney
+      jvm-arguments: -Xms2G -Xmx3G
+      public-address: starjourney.local:25566
+      game-version: 1.21.1
 management:
   endpoints:
     web:
