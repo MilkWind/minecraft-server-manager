@@ -36,7 +36,7 @@ The product target is a lightweight dashboard, not a large-scale hosting platfor
 Visitors can:
 
 - View online players
-- View loaded mods, datapacks, and resource packs
+- View loaded mods and datapacks
 - View the server game version
 - View server chat messages
 - View server performance data: CPU usage, memory usage, network speed
@@ -53,7 +53,7 @@ Managers can:
 - OP and DEOP players
 - Ban players
 - Send messages to all players or specific players
-- Suspend or resume mods, datapacks, and resource packs, then restart the server
+- Suspend or resume mods and datapacks, then restart the server
 - Define and send custom commands to the Minecraft server console
 
 All managers are trusted operators and can manage all servers.
@@ -135,7 +135,7 @@ The backend is responsible for:
 - Authentication and authorization
 - Server discovery and configuration lookup
 - Polling or collecting server runtime information
-- Reading server output
+- Reading server log files and runtime output
 - Sending commands to Minecraft server consoles
 - Exposing visitor APIs
 - Exposing manager APIs
@@ -179,7 +179,7 @@ Managers can configure **JVM parameters** (such as `-Xmx`, `-Xms` for memory all
 
 The manager system integrates with the server process by:
 
-- Reading console output or generated runtime information
+- Reading `logs/latest.log`, rotated `*.log.gz` history, and generated runtime information
 - Sending commands to the Minecraft server console input
 
 Custom command safety rule:
@@ -193,7 +193,7 @@ This keeps custom commands within the Minecraft server command surface.
 
 Manager view:
 
-- Managers can view full raw server logs
+- Managers can view full raw server logs from `logs/latest.log` and rotated `*.log.gz` history
 
 Visitor view:
 
@@ -233,7 +233,6 @@ Polling frequency should be conservative to avoid unnecessary load.
 - Show online players
 - Show loaded mods
 - Show loaded datapacks
-- Show loaded resource packs
 - Show server version
 - Show filtered chat messages
 - Show server performance metrics
@@ -252,8 +251,8 @@ Polling frequency should be conservative to avoid unnecessary load.
 - Ban player
 - Send message to all players
 - Send message to specific player
-- Suspend selected mods, datapacks, or resource packs
-- Resume selected mods, datapacks, or resource packs
+- Suspend selected mods or datapacks
+- Resume selected mods or datapacks
 - Restart server after asset state changes
 - Create server-specific custom commands
 - Execute server-specific custom commands

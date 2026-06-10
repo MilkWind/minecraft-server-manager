@@ -2,7 +2,6 @@ package minecraft.milkwind.manager.server.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PostConstruct;
-import minecraft.milkwind.manager.auth.service.ManagerBootstrapService;
 import minecraft.milkwind.manager.common.exception.ApiException;
 import minecraft.milkwind.manager.server.dto.ConsoleCommandResultDto;
 import minecraft.milkwind.manager.server.dto.CustomCommandDto;
@@ -34,32 +33,31 @@ public class ServerCatalogService {
     private final ServerConfigMapper serverConfigMapper;
     private final CustomCommandMapper customCommandMapper;
     private final DatabaseBootstrapService databaseBootstrapService;
-    private final ManagerBootstrapService managerBootstrapService;
     private final ServerProcessService serverProcessService;
     private final ServerMetricsService serverMetricsService;
     private final ServerAssetService serverAssetService;
+    private final ServerLogService serverLogService;
 
     public ServerCatalogService(
             ServerConfigMapper serverConfigMapper,
             CustomCommandMapper customCommandMapper,
             DatabaseBootstrapService databaseBootstrapService,
-            ManagerBootstrapService managerBootstrapService,
             ServerProcessService serverProcessService,
             ServerMetricsService serverMetricsService,
-            ServerAssetService serverAssetService
+            ServerAssetService serverAssetService,
+            ServerLogService serverLogService
     ) {
         this.serverConfigMapper = serverConfigMapper;
         this.customCommandMapper = customCommandMapper;
         this.databaseBootstrapService = databaseBootstrapService;
-        this.managerBootstrapService = managerBootstrapService;
         this.serverProcessService = serverProcessService;
         this.serverMetricsService = serverMetricsService;
         this.serverAssetService = serverAssetService;
+        this.serverLogService = serverLogService;
     }
 
     @PostConstruct
     public void initialize() {
-        managerBootstrapService.ensureBootstrapManager();
         databaseBootstrapService.ensureSeedData();
     }
 
@@ -91,30 +89,7 @@ public class ServerCatalogService {
 
     public List<LogEntryDto> getFullLogs(String serverId) {
         ServerConfigEntity config = requireServerConfig(serverId);
-        ServerRuntimeState runtime = serverProcessService.snapshotRuntime(config);
-        List<LogEntryDto> logs = runtime.getRecentLines().stream()
-                .map(line -> new LogEntryDto(
-                        UUID.randomUUID().toString(),
-                        line.timestamp(),
-                        line.level(),
-                        line.source(),
-                        line.message(),
-                        false
-                ))
-                .toList();
-
-        if (!logs.isEmpty()) {
-            return logs;
-        }
-
-        return List.of(new LogEntryDto(
-                UUID.randomUUID().toString(),
-                Instant.now(),
-                "INFO",
-                "manager",
-                "Server logs will appear here after the managed process produces output.",
-                false
-        ));
+        return serverLogService.readLogs(config);
     }
 
     public PowerActionResultDto runPowerAction(String serverId, String action) {
@@ -232,7 +207,6 @@ public class ServerCatalogService {
                 players,
                 serverAssetService.listMods(config),
                 serverAssetService.listDatapacks(config),
-                serverAssetService.listResourcePacks(config),
                 publicChatMessages,
                 metrics,
                 runtime.isRestartRecommended(),

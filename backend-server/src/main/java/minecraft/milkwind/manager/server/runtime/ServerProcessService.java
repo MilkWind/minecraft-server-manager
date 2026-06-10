@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 public class ServerProcessService {
 
     private static final Duration STOP_TIMEOUT = Duration.ofSeconds(20);
-    private static final Pattern STRUCTURED_LOG_PATTERN = Pattern.compile("^\\[[^\\]]+\\]\\s*\\[[^\\]/]+/([A-Z]+)]\\s*(?:(?:\\[[^\\]]+])\\s*)?(.*)$");
     private static final Pattern CHAT_PATTERN = Pattern.compile("<([^>]+)>\\s+(.*)");
     private static final Pattern JOIN_PATTERN = Pattern.compile("([A-Za-z0-9_]+)\\s+joined the game", Pattern.CASE_INSENSITIVE);
     private static final Pattern LEFT_PATTERN = Pattern.compile("([A-Za-z0-9_]+)\\s+left the game", Pattern.CASE_INSENSITIVE);
@@ -194,8 +193,7 @@ public class ServerProcessService {
             return;
         }
 
-        ParsedLogLine parsed = parseLogLine(line);
-        runtime.appendLine(parsed.level(), parsed.source(), parsed.message());
+        MinecraftLogParser.ParsedLogLine parsed = MinecraftLogParser.parse(line);
         updateRuntimeStatusFromLine(runtime, parsed.message());
         parsePlayerState(runtime, parsed.message());
         parseChat(runtime, parsed);
@@ -232,7 +230,7 @@ public class ServerProcessService {
         runtime.replaceOnlinePlayers(players);
     }
 
-    private void parseChat(ServerRuntimeState runtime, ParsedLogLine parsed) {
+    private void parseChat(ServerRuntimeState runtime, MinecraftLogParser.ParsedLogLine parsed) {
         Matcher chatMatcher = CHAT_PATTERN.matcher(parsed.message());
         if (!chatMatcher.find()) {
             return;
@@ -294,26 +292,6 @@ public class ServerProcessService {
         return normalized;
     }
 
-    private ParsedLogLine parseLogLine(String line) {
-        Matcher structuredMatcher = STRUCTURED_LOG_PATTERN.matcher(line);
-        if (structuredMatcher.matches()) {
-            String level = normalizeLevel(structuredMatcher.group(1));
-            String message = structuredMatcher.group(2).trim();
-            return new ParsedLogLine(level, "minecraft", message.isBlank() ? line : message);
-        }
-
-        return new ParsedLogLine("INFO", "minecraft", line);
-    }
-
-    private String normalizeLevel(String level) {
-        return switch (level) {
-            case "WARN", "WARNING" -> "WARN";
-            case "ERROR", "SEVERE" -> "ERROR";
-            case "DEBUG", "TRACE" -> "DEBUG";
-            default -> "INFO";
-        };
-    }
-
     private void updateRuntimeStatus(ServerRuntimeState runtime, String status) {
         runtime.setStatus(status);
         serverStatusService.updateStatus(runtime.getServerId(), status);
@@ -372,12 +350,5 @@ public class ServerProcessService {
         command[command.length - 2] = "-jar";
         command[command.length - 1] = jar.toAbsolutePath().toString();
         return command;
-    }
-
-    private record ParsedLogLine(
-            String level,
-            String source,
-            String message
-    ) {
     }
 }

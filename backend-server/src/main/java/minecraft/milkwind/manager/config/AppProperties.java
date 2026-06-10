@@ -18,17 +18,15 @@ public class AppProperties {
     @Getter
     @Setter
     public static class Auth {
-        private BootstrapManager bootstrapManager = new BootstrapManager();
+        private ManagerRegistration managerRegistration = new ManagerRegistration();
         private long sessionTtlHours = 8;
     }
 
     @Getter
     @Setter
-    public static class BootstrapManager {
-        private String username = "admin";
-        private String displayName = "管理员";
-        private String password = "admin123456";
-        private String totpSecret = "JBSWY3DPEHPK3PXP";
+    public static class ManagerRegistration {
+        private String verificationCode = "";
+        private boolean isEnable = false;
     }
 
     @Getter

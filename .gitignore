@@ -1,2 +1,5 @@
 # Local repository files
 .m2/
+.tmp/
+.javac-build/
+test-server/

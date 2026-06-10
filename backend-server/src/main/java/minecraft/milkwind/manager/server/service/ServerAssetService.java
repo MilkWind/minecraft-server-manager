@@ -29,10 +29,6 @@ public class ServerAssetService {
         return scanAssets(Path.of(config.getRootDirectory(), "world", "datapacks"), "DATAPACK");
     }
 
-    public List<ManagedAssetDto> listResourcePacks(ServerConfigEntity config) {
-        return scanAssets(Path.of(config.getRootDirectory(), "resourcepacks"), "RESOURCE_PACK");
-    }
-
     public AssetActionResultDto suspendAsset(ServerConfigEntity config, String assetId) {
         return moveAsset(config, assetId, false);
     }
@@ -110,7 +106,6 @@ public class ServerAssetService {
         Path baseDirectory = switch (type) {
             case "MOD" -> Path.of(config.getRootDirectory(), "mods");
             case "DATAPACK" -> Path.of(config.getRootDirectory(), "world", "datapacks");
-            case "RESOURCE_PACK" -> Path.of(config.getRootDirectory(), "resourcepacks");
             default -> throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_type", "Unsupported asset type");
         };
 

@@ -16,7 +16,7 @@ const emit = defineEmits<{
 
 const { login, loading } = useSession();
 
-const username = ref('admin');
+const username = ref('');
 const password = ref('');
 const totpCode = ref('');
 const errorMessage = ref('');
@@ -36,7 +36,9 @@ async function submit() {
     emit('success');
     emit('update:open', false);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '登录失败，请检查账号、密码和验证码。';
+    errorMessage.value = error instanceof Error
+      ? error.message
+      : 'Sign-in failed. Check the manager username, password, and TOTP code.';
   }
 }
 
@@ -49,7 +51,7 @@ function close() {
 <template>
   <Modal
     :open="props.open"
-    title="管理员登录"
+    title="Manager Sign In"
     :mask-closable="true"
     :show-footer="false"
     :typewriter="true"
@@ -57,30 +59,32 @@ function close() {
     @close="close"
     @update:open="emit('update:open', $event)"
   >
-    <p class="modal-copy">输入账号、密码和动态验证码后继续管理服务器。</p>
+    <p class="modal-copy">
+      Sign in with the manager account you registered from the private manager-registration link.
+    </p>
 
     <form class="login-form" @submit.prevent="submit">
       <label>
-        <span>账号</span>
-        <Input v-model="username" placeholder="admin" />
+        <span>Username</span>
+        <Input v-model="username" placeholder="manager username" />
       </label>
 
       <label>
-        <span>密码</span>
-        <Input v-model="password" type="password" placeholder="请输入密码" />
+        <span>Password</span>
+        <Input v-model="password" type="password" placeholder="manager password" />
       </label>
 
       <label>
-        <span>动态验证码</span>
-        <Input v-model="totpCode" :maxlength="6" placeholder="6 位验证码" />
+        <span>TOTP Code</span>
+        <Input v-model="totpCode" :maxlength="6" placeholder="6-digit authenticator code" />
       </label>
 
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
       <footer class="login-actions">
-        <Button type="default" html-type="button" @click="close">取消</Button>
+        <Button type="default" html-type="button" @click="close">Cancel</Button>
         <Button type="primary" html-type="submit" :loading="loading">
-          {{ loading ? '登录中...' : '登录' }}
+          {{ loading ? 'Signing in...' : 'Sign in' }}
         </Button>
       </footer>
     </form>

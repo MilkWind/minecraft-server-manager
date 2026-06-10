@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import ServerDirectoryPage from '@/views/ServerDirectoryPage.vue';
+import ManagerRegistrationPage from '@/views/ManagerRegistrationPage.vue';
 import ServerWorkspacePage from '@/views/ServerWorkspacePage.vue';
 
 const router = createRouter({
@@ -13,6 +14,11 @@ const router = createRouter({
       path: '/servers',
       name: 'server-directory',
       component: ServerDirectoryPage,
+    },
+    {
+      path: '/manager-register/:routeCode(\\d{6})',
+      name: 'manager-registration',
+      component: ManagerRegistrationPage,
     },
     {
       path: '/servers/:serverId/:clientType(visitor|manager)',

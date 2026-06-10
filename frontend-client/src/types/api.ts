@@ -13,6 +13,32 @@ export interface LoginRequest {
   serverId: string;
 }
 
+export interface ManagerRegistrationRequest {
+  username: string;
+  displayName: string;
+  password: string;
+}
+
+export interface ManagerRegistrationQrPayload {
+  registrationId: string;
+  username: string;
+  displayName: string;
+  qrCodeImage: string;
+  manualEntryKey: string;
+  otpauthUri: string;
+}
+
+export interface ManagerRegistrationConfirmRequest {
+  registrationId: string;
+  totpCode: string;
+}
+
+export interface ManagerRegistrationResult {
+  username: string;
+  displayName: string;
+  message: string;
+}
+
 export interface PublicServerSummary {
   serverId: string;
   displayName: string;
@@ -73,7 +99,6 @@ export interface ServerSnapshot {
   onlinePlayers: Player[];
   mods: ManagedAsset[];
   datapacks: ManagedAsset[];
-  resourcePacks: ManagedAsset[];
   chatMessages: LogEntry[];
   metrics: ServerMetrics;
   restartRecommended: boolean;
