@@ -30,7 +30,7 @@ app:
     - id: StarJourney
       display-name: StarJourney
       root-directory: D:/minecraft/servers/StarJourney
-      jvm-arguments: -Xms2G -Xmx3G
+      jvm-arguments: -Xms2G -Xmx4G
       public-address: starjourney.local:25566
       game-version: 1.21.1
 management:
