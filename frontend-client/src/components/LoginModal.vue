@@ -38,7 +38,7 @@ async function submit() {
   } catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
-      : 'Sign-in failed. Check the manager username, password, and TOTP code.';
+      : '登录失败，请检查管理员用户名、密码和 TOTP 动态码。';
   }
 }
 
@@ -51,7 +51,7 @@ function close() {
 <template>
   <Modal
     :open="props.open"
-    title="Manager Sign In"
+    title="管理员登录"
     :mask-closable="true"
     :show-footer="false"
     :typewriter="true"
@@ -60,31 +60,31 @@ function close() {
     @update:open="emit('update:open', $event)"
   >
     <p class="modal-copy">
-      Sign in with the manager account you registered from the private manager-registration link.
+      使用通过私有管理员注册链接注册的管理员账号登录。
     </p>
 
     <form class="login-form" @submit.prevent="submit">
       <label>
-        <span>Username</span>
-        <Input v-model="username" placeholder="manager username" />
+        <span>用户名</span>
+        <Input v-model="username" placeholder="管理员用户名" />
       </label>
 
       <label>
-        <span>Password</span>
-        <Input v-model="password" type="password" placeholder="manager password" />
+        <span>密码</span>
+        <Input v-model="password" type="password" placeholder="管理员密码" />
       </label>
 
       <label>
-        <span>TOTP Code</span>
-        <Input v-model="totpCode" :maxlength="6" placeholder="6-digit authenticator code" />
+        <span>TOTP 动态码</span>
+        <Input v-model="totpCode" :maxlength="6" placeholder="6 位验证器动态码" />
       </label>
 
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
       <footer class="login-actions">
-        <Button type="default" html-type="button" @click="close">Cancel</Button>
+        <Button type="default" html-type="button" @click="close">取消</Button>
         <Button type="primary" html-type="submit" :loading="loading">
-          {{ loading ? 'Signing in...' : 'Sign in' }}
+          {{ loading ? '登录中...' : '登录' }}
         </Button>
       </footer>
     </form>

@@ -36,7 +36,7 @@ const canConfirm = computed(() => Boolean(qrPayload.value) && /^\d{6}$/.test(tot
 
 async function generateQr() {
   if (!canGenerateQr.value) {
-    errorMessage.value = 'Complete the manager account form before generating the QR code.';
+    errorMessage.value = '请先完整填写管理员账号表单，再生成 QR 码。';
     return;
   }
 
@@ -56,7 +56,7 @@ async function generateQr() {
     totpCode.value = '';
   } catch (error) {
     qrPayload.value = null;
-    errorMessage.value = error instanceof Error ? error.message : 'Generating the manager QR code failed.';
+    errorMessage.value = error instanceof Error ? error.message : '生成管理员 QR 码失败。';
   } finally {
     generatingQr.value = false;
   }
@@ -81,7 +81,7 @@ async function confirmManagerRegistration() {
     });
     successMessage.value = response.message;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Confirming the manager registration failed.';
+    errorMessage.value = error instanceof Error ? error.message : '确认管理员注册失败。';
   } finally {
     confirmingRegistration.value = false;
   }
@@ -97,95 +97,93 @@ function resetRegistration() {
 
 <template>
   <AppShell
-    title="Manager Registration"
-    subtitle="This page works only when it is opened from the private manager-registration URL. The backend validates the hidden verification segment before issuing any QR code."
+    title="管理员注册"
+    subtitle="此页面仅在通过私有管理员注册链接打开时可用。后端会在签发 QR 码前校验隐藏验证片段。"
     :manager-mode="true"
   >
     <section class="registration-grid">
       <Card class="panel">
         <div class="panel-header">
-          <p class="eyebrow">Step 1</p>
-          <h2>Create the manager account</h2>
+          <p class="eyebrow">步骤 1</p>
+          <h2>创建管理员账号</h2>
         </div>
 
         <p class="panel-copy">
-          Submit the manager username, display name, and password first. The backend will create a dedicated TOTP secret and
-          return a QR code only if this private route is still enabled in <code>application.yaml</code>.
+          请先提交管理员用户名、显示名称和密码。只有当此私有路线仍在 <code>application.yaml</code> 中启用时，
+          后端才会创建专用 TOTP 密钥并返回 QR 码。
         </p>
 
         <div class="form-grid">
           <label>
-            <span>Display Name</span>
-            <Input v-model="displayName" placeholder="Manager display name" />
+            <span>显示名称</span>
+            <Input v-model="displayName" placeholder="管理员显示名称" />
           </label>
 
           <label>
-            <span>Username</span>
-            <Input v-model="username" placeholder="Manager username" />
+            <span>用户名</span>
+            <Input v-model="username" placeholder="管理员用户名" />
           </label>
 
           <label>
-            <span>Password</span>
-            <Input v-model="password" type="password" placeholder="At least 8 characters" />
+            <span>密码</span>
+            <Input v-model="password" type="password" placeholder="至少 8 个字符" />
           </label>
 
           <label>
-            <span>Confirm Password</span>
-            <Input v-model="confirmPassword" type="password" placeholder="Repeat the password" />
+            <span>确认密码</span>
+            <Input v-model="confirmPassword" type="password" placeholder="再次输入密码" />
           </label>
         </div>
 
-        <p v-if="!passwordsMatch && confirmPassword" class="warning-banner">The password confirmation does not match.</p>
+        <p v-if="!passwordsMatch && confirmPassword" class="warning-banner">两次输入的密码不一致。</p>
         <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
         <p v-if="successMessage" class="success-banner">{{ successMessage }}</p>
 
         <div class="panel-actions">
-          <Button type="default" :disabled="!qrPayload" @click="resetRegistration">Reset</Button>
+          <Button type="default" :disabled="!qrPayload" @click="resetRegistration">重置</Button>
           <Button type="primary" :disabled="!canGenerateQr" :loading="generatingQr" @click="generateQr">
-            {{ generatingQr ? 'Generating QR...' : 'Generate QR Code' }}
+            {{ generatingQr ? '正在生成 QR 码...' : '生成 QR 码' }}
           </Button>
         </div>
       </Card>
 
       <Card class="panel qr-panel">
         <div class="panel-header">
-          <p class="eyebrow">Step 2</p>
-          <h2>Bind and confirm the authenticator</h2>
+          <p class="eyebrow">步骤 2</p>
+          <h2>绑定并确认验证器</h2>
         </div>
 
         <template v-if="qrPayload">
-          <img class="qr-image" :src="qrPayload.qrCodeImage" alt="Manager authenticator QR code" />
+          <img class="qr-image" :src="qrPayload.qrCodeImage" alt="管理员验证器 QR 码" />
 
           <div class="secret-box">
-            <p>Manual setup key</p>
+            <p>手动设置密钥</p>
             <code>{{ qrPayload.manualEntryKey }}</code>
           </div>
 
           <p class="panel-copy">
-            Scan the QR code in your authenticator app. Then enter the first 6-digit code here to activate the manager
-            account.
+            请使用验证器应用扫描 QR 码，然后在此输入首次生成的 6 位动态码以激活管理员账号。
           </p>
 
           <label class="confirm-label">
-            <span>Authenticator Code</span>
-            <Input v-model="totpCode" :maxlength="6" placeholder="6-digit code" />
+            <span>验证器动态码</span>
+            <Input v-model="totpCode" :maxlength="6" placeholder="6 位动态码" />
           </label>
 
           <div class="panel-actions">
             <Button type="primary" :disabled="!canConfirm" :loading="confirmingRegistration" @click="confirmManagerRegistration">
-              {{ confirmingRegistration ? 'Confirming...' : 'Confirm Registration' }}
+              {{ confirmingRegistration ? '确认中...' : '确认注册' }}
             </Button>
           </div>
         </template>
 
         <template v-else>
           <p class="panel-copy">
-            The manager-specific QR code will appear here after the private route passes backend validation and the account
-            details are accepted.
+            私有路线通过后端校验且账号信息被接受后，管理员专用 QR 码会显示在这里。
           </p>
         </template>
 
-        <RouterLink to="/servers" class="directory-link">Back to server directory</RouterLink>
+        <RouterLink to="/servers" class="directory-link">返回服务器目录</RouterLink>
       </Card>
     </section>
   </AppShell>

@@ -2,4 +2,5 @@
 .m2/
 .tmp/
 .javac-build/
+.codex-temp/
 test-server/

@@ -13,7 +13,7 @@ defineProps<{
     <header class="hero">
       <Card type="title" class="hero-card">
         <div class="hero-copy">
-          <p class="eyebrow">{{ managerMode ? 'Manager Console' : 'Visitor View' }}</p>
+          <p class="eyebrow">{{ managerMode ? '管理控制台' : '访客视图' }}</p>
           <h1>{{ title }}</h1>
           <p v-if="subtitle">{{ subtitle }}</p>
         </div>
