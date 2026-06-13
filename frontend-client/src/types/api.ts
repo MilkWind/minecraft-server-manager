@@ -7,20 +7,10 @@ export interface AuthSession {
 }
 
 export interface LoginRequest {
-  username: string;
-  password: string;
   totpCode: string;
-  serverId: string;
-}
-
-export interface ManagerRegistrationRequest {
-  username: string;
-  displayName: string;
-  password: string;
 }
 
 export interface ManagerRegistrationQrPayload {
-  registrationId: string;
   username: string;
   displayName: string;
   qrCodeImage: string;
@@ -29,7 +19,6 @@ export interface ManagerRegistrationQrPayload {
 }
 
 export interface ManagerRegistrationConfirmRequest {
-  registrationId: string;
   totpCode: string;
 }
 

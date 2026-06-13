@@ -4,7 +4,6 @@ import { Button, Input, Modal } from 'animal-island-vue';
 import { useSession } from '@/composables/useSession';
 
 const props = defineProps<{
-  serverId: string;
   open: boolean;
 }>();
 
@@ -16,8 +15,6 @@ const emit = defineEmits<{
 
 const { login, loading } = useSession();
 
-const username = ref('');
-const password = ref('');
 const totpCode = ref('');
 const errorMessage = ref('');
 
@@ -26,19 +23,15 @@ async function submit() {
 
   try {
     await login({
-      username: username.value,
-      password: password.value,
       totpCode: totpCode.value,
-      serverId: props.serverId,
     });
-    password.value = '';
     totpCode.value = '';
     emit('success');
     emit('update:open', false);
   } catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
-      : '登录失败，请检查管理员用户名、密码和 TOTP 动态码。';
+      : '登录失败，请检查 TOTP 动态码。';
   }
 }
 
@@ -60,20 +53,10 @@ function close() {
     @update:open="emit('update:open', $event)"
   >
     <p class="modal-copy">
-      使用通过私有管理员注册链接注册的管理员账号登录。
+      输入已绑定管理员账号的 6 位验证器动态码即可登录。
     </p>
 
     <form class="login-form" @submit.prevent="submit">
-      <label>
-        <span>用户名</span>
-        <Input v-model="username" placeholder="管理员用户名" />
-      </label>
-
-      <label>
-        <span>密码</span>
-        <Input v-model="password" type="password" placeholder="管理员密码" />
-      </label>
-
       <label>
         <span>TOTP 动态码</span>
         <Input v-model="totpCode" :maxlength="6" placeholder="6 位验证器动态码" />

@@ -1,12 +1,11 @@
 package minecraft.milkwind.manager.auth.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
 import minecraft.milkwind.manager.auth.dto.ManagerRegistrationConfirmRequest;
 import minecraft.milkwind.manager.auth.dto.ManagerRegistrationQrDto;
-import minecraft.milkwind.manager.auth.dto.ManagerRegistrationRequest;
 import minecraft.milkwind.manager.auth.dto.ManagerRegistrationResultDto;
 import minecraft.milkwind.manager.auth.service.ManagerRegistrationService;
 import minecraft.milkwind.manager.common.api.ApiResponse;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,19 +21,18 @@ public class ManagerRegistrationController {
         this.managerRegistrationService = managerRegistrationService;
     }
 
-    @PostMapping("/qr")
+    @PostMapping("/{username}/qr")
     public ApiResponse<ManagerRegistrationQrDto> createQr(
-            @RequestBody ManagerRegistrationRequest request,
-            HttpServletRequest httpRequest
+            @PathVariable String username
     ) {
-        return ApiResponse.success(managerRegistrationService.createRegistrationQr(request, httpRequest));
+        return ApiResponse.success(managerRegistrationService.createRegistrationQr(username));
     }
 
-    @PostMapping("/confirm")
+    @PostMapping("/{username}/confirm")
     public ApiResponse<ManagerRegistrationResultDto> confirm(
-            @RequestBody ManagerRegistrationConfirmRequest request,
-            HttpServletRequest httpRequest
+            @PathVariable String username,
+            @RequestBody ManagerRegistrationConfirmRequest request
     ) {
-        return ApiResponse.success(managerRegistrationService.confirmRegistration(request, httpRequest));
+        return ApiResponse.success(managerRegistrationService.confirmRegistration(username, request));
     }
 }

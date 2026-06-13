@@ -7,8 +7,5 @@ export interface AuthSession {
 }
 
 export interface LoginRequest {
-  username: string;
-  password: string;
   totpCode: string;
-  serverId: string;
 }

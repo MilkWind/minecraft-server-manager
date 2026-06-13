@@ -12,11 +12,11 @@ import minecraft.milkwind.manager.common.exception.ApiException;
 import minecraft.milkwind.manager.common.time.TimeSupport;
 import minecraft.milkwind.manager.config.AppProperties;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,50 +25,30 @@ public class AuthService {
 
     private final ManagerUserMapper managerUserMapper;
     private final ManagerSessionMapper managerSessionMapper;
-    private final PasswordEncoder passwordEncoder;
     private final AppProperties appProperties;
     private final TotpService totpService;
 
     public AuthService(
             ManagerUserMapper managerUserMapper,
             ManagerSessionMapper managerSessionMapper,
-            PasswordEncoder passwordEncoder,
             AppProperties appProperties,
             TotpService totpService
     ) {
         this.managerUserMapper = managerUserMapper;
         this.managerSessionMapper = managerSessionMapper;
-        this.passwordEncoder = passwordEncoder;
         this.appProperties = appProperties;
         this.totpService = totpService;
     }
 
     public AuthSessionDto login(LoginRequest request, List<String> allowedServerIds) {
-        String username = requireText(request.username(), "username");
-        String password = requireText(request.password(), "password");
         String totpCode = requireText(request.totpCode(), "totp_code");
-        String targetServerId = requireText(request.serverId(), "server_id");
 
-        if (!allowedServerIds.contains(targetServerId)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "server_not_allowed", "The selected server is not available");
-        }
-
-        ManagerUserEntity user = managerUserMapper.selectOne(
-                new LambdaQueryWrapper<ManagerUserEntity>().eq(ManagerUserEntity::getUsername, username)
-        );
-        if (user == null || Boolean.FALSE.equals(user.getActive())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_credentials", "Invalid manager credentials");
-        }
-
-        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_credentials", "Invalid manager credentials");
-        }
-
-        if (!totpService.verify(user.getTotpCode(), totpCode)) {
+        ManagerUserEntity user = resolveActiveManagerByTotp(totpCode);
+        if (user == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_totp", "Invalid verification code");
         }
 
-        revokeExistingSessions(username);
+        revokeExistingSessions(user.getUsername());
 
         String token = UUID.randomUUID().toString();
         Instant now = Instant.now();
@@ -76,7 +56,7 @@ public class AuthService {
 
         ManagerSessionEntity entity = new ManagerSessionEntity();
         entity.setToken(token);
-        entity.setUsername(username);
+        entity.setUsername(user.getUsername());
         entity.setDisplayName(user.getDisplayName());
         entity.setCreatedAt(TimeSupport.nowIso());
         entity.setLastSeenAt(TimeSupport.nowIso());
@@ -90,6 +70,24 @@ public class AuthService {
                 expiresAt,
                 allowedServerIds
         );
+    }
+
+    private ManagerUserEntity resolveActiveManagerByTotp(String totpCode) {
+        List<ManagerUserEntity> activeUsers = managerUserMapper.selectList(
+                new LambdaQueryWrapper<ManagerUserEntity>().eq(ManagerUserEntity::getActive, Boolean.TRUE)
+        );
+        List<ManagerUserEntity> matches = new ArrayList<>();
+        for (ManagerUserEntity user : activeUsers) {
+            if (totpService.verify(user.getTotpCode(), totpCode)) {
+                matches.add(user);
+            }
+        }
+
+        if (matches.size() > 1) {
+            throw new ApiException(HttpStatus.CONFLICT, "ambiguous_totp", "Verification code matches multiple managers");
+        }
+
+        return matches.isEmpty() ? null : matches.get(0);
     }
 
     public AuthSessionDto currentSession(ManagerSession principal, List<String> allowedServerIds) {

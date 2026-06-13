@@ -182,7 +182,6 @@ async function logout() {
     <LoginModal
       v-if="managerView"
       v-model:open="loginOpen"
-      :server-id="serverId"
       @close="closeLogin"
       @success="onLoginSuccess"
     />

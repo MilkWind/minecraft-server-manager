@@ -16,7 +16,7 @@ const router = createRouter({
       component: ServerDirectoryPage,
     },
     {
-      path: '/manager-register/:routeCode(\\d{6})',
+      path: '/manager-register/:username',
       name: 'manager-registration',
       component: ManagerRegistrationPage,
     },

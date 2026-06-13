@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Button, Card, Input } from 'animal-island-vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import { apiRequest } from '@/lib/api';
 import type {
   ManagerRegistrationConfirmRequest,
   ManagerRegistrationQrPayload,
-  ManagerRegistrationRequest,
   ManagerRegistrationResult,
 } from '@/types/api';
 
-const displayName = ref('');
-const username = ref('');
-const password = ref('');
-const confirmPassword = ref('');
+const route = useRoute();
+const username = computed(() => String(route.params.username ?? '').trim());
+
 const totpCode = ref('');
 const qrPayload = ref<ManagerRegistrationQrPayload | null>(null);
 const successMessage = ref('');
@@ -22,21 +20,12 @@ const errorMessage = ref('');
 const generatingQr = ref(false);
 const confirmingRegistration = ref(false);
 
-const passwordsMatch = computed(() => password.value === confirmPassword.value);
-const canGenerateQr = computed(() => {
-  return Boolean(
-    displayName.value.trim()
-      && username.value.trim()
-      && password.value
-      && confirmPassword.value
-      && passwordsMatch.value,
-  );
-});
+const canGenerateQr = computed(() => Boolean(username.value));
 const canConfirm = computed(() => Boolean(qrPayload.value) && /^\d{6}$/.test(totpCode.value.trim()));
 
 async function generateQr() {
   if (!canGenerateQr.value) {
-    errorMessage.value = '请先完整填写管理员账号表单，再生成 QR 码。';
+    errorMessage.value = '注册链接缺少管理员用户名。';
     return;
   }
 
@@ -45,14 +34,10 @@ async function generateQr() {
   successMessage.value = '';
 
   try {
-    qrPayload.value = await apiRequest<ManagerRegistrationQrPayload>('/api/public/manager-registration/qr', {
-      method: 'POST',
-      body: JSON.stringify({
-        displayName: displayName.value.trim(),
-        username: username.value.trim(),
-        password: password.value,
-      } satisfies ManagerRegistrationRequest),
-    });
+    qrPayload.value = await apiRequest<ManagerRegistrationQrPayload>(
+      `/api/public/manager-registration/${encodeURIComponent(username.value)}/qr`,
+      { method: 'POST' },
+    );
     totpCode.value = '';
   } catch (error) {
     qrPayload.value = null;
@@ -72,13 +57,15 @@ async function confirmManagerRegistration() {
   successMessage.value = '';
 
   try {
-    const response = await apiRequest<ManagerRegistrationResult>('/api/public/manager-registration/confirm', {
-      method: 'POST',
-      body: JSON.stringify({
-        registrationId: qrPayload.value.registrationId,
-        totpCode: totpCode.value.trim(),
-      } satisfies ManagerRegistrationConfirmRequest),
-    });
+    const response = await apiRequest<ManagerRegistrationResult>(
+      `/api/public/manager-registration/${encodeURIComponent(username.value)}/confirm`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          totpCode: totpCode.value.trim(),
+        } satisfies ManagerRegistrationConfirmRequest),
+      },
+    );
     successMessage.value = response.message;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '确认管理员注册失败。';
@@ -97,45 +84,22 @@ function resetRegistration() {
 
 <template>
   <AppShell
-    title="管理员注册"
-    subtitle="此页面仅在通过私有管理员注册链接打开时可用。后端会在签发 QR 码前校验隐藏验证片段。"
+    title="管理员 2FA 注册"
+    subtitle="此公开注册链接绑定了一个后端配置中的管理员用户名。完成绑定后，登录只需要输入验证器动态码。"
     :manager-mode="true"
   >
     <section class="registration-grid">
       <Card class="panel">
         <div class="panel-header">
           <p class="eyebrow">步骤 1</p>
-          <h2>创建管理员账号</h2>
+          <h2>生成验证器 QR 码</h2>
         </div>
 
         <p class="panel-copy">
-          请先提交管理员用户名、显示名称和密码。只有当此私有路线仍在 <code>application.yaml</code> 中启用时，
-          后端才会创建专用 TOTP 密钥并返回 QR 码。
+          当前注册链接对应管理员账号：<strong>{{ username || '未识别' }}</strong>。
+          后端会检查 <code>application.yaml</code> 中该账号的注册链接开关。
         </p>
 
-        <div class="form-grid">
-          <label>
-            <span>显示名称</span>
-            <Input v-model="displayName" placeholder="管理员显示名称" />
-          </label>
-
-          <label>
-            <span>用户名</span>
-            <Input v-model="username" placeholder="管理员用户名" />
-          </label>
-
-          <label>
-            <span>密码</span>
-            <Input v-model="password" type="password" placeholder="至少 8 个字符" />
-          </label>
-
-          <label>
-            <span>确认密码</span>
-            <Input v-model="confirmPassword" type="password" placeholder="再次输入密码" />
-          </label>
-        </div>
-
-        <p v-if="!passwordsMatch && confirmPassword" class="warning-banner">两次输入的密码不一致。</p>
         <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
         <p v-if="successMessage" class="success-banner">{{ successMessage }}</p>
 
@@ -162,7 +126,8 @@ function resetRegistration() {
           </div>
 
           <p class="panel-copy">
-            请使用验证器应用扫描 QR 码，然后在此输入首次生成的 6 位动态码以激活管理员账号。
+            请使用验证器应用扫描 QR 码，然后输入首次生成的 6 位动态码以激活
+            <strong>{{ qrPayload.displayName }}</strong>。
           </p>
 
           <label class="confirm-label">
@@ -179,7 +144,7 @@ function resetRegistration() {
 
         <template v-else>
           <p class="panel-copy">
-            私有路线通过后端校验且账号信息被接受后，管理员专用 QR 码会显示在这里。
+            点击生成 QR 码后，管理员专用验证器绑定信息会显示在这里。无需设置密码。
           </p>
         </template>
 
@@ -226,12 +191,6 @@ function resetRegistration() {
   line-height: 1.6;
 }
 
-.form-grid {
-  display: grid;
-  gap: 14px;
-}
-
-.form-grid label,
 .confirm-label {
   display: grid;
   gap: 8px;
@@ -246,18 +205,12 @@ function resetRegistration() {
   flex-wrap: wrap;
 }
 
-.warning-banner,
 .error-banner,
 .success-banner {
   margin: 0;
   border-radius: var(--animal-border-radius-base);
   padding: 12px 14px;
   font-weight: 700;
-}
-
-.warning-banner {
-  background: rgba(238, 191, 67, 0.16);
-  color: #8a6500;
 }
 
 .error-banner {

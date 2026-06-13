@@ -1,21 +1,20 @@
 package minecraft.milkwind.manager.config;
 
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Optional;
 
 @Service
 public class ApplicationYamlManagerRegistrationStore {
@@ -26,94 +25,130 @@ public class ApplicationYamlManagerRegistrationStore {
     );
 
     private final Object lock = new Object();
-    private final Yaml yaml;
     private final AppProperties appProperties;
+    private final Yaml yaml = new Yaml();
+    private volatile ManagerRegistrationConfigSnapshot snapshot;
     private Path applicationYamlPath;
 
+    @Autowired
     public ApplicationYamlManagerRegistrationStore(AppProperties appProperties) {
         this.appProperties = appProperties;
-        DumperOptions options = new DumperOptions();
-        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-        options.setPrettyFlow(true);
-        options.setIndent(2);
-        this.yaml = new Yaml(options);
+    }
+
+    ApplicationYamlManagerRegistrationStore(AppProperties appProperties, Path applicationYamlPath) {
+        this.appProperties = appProperties;
+        this.applicationYamlPath = applicationYamlPath.toAbsolutePath();
     }
 
     @PostConstruct
     public void initialize() {
+        if (applicationYamlPath != null) {
+            reload();
+            return;
+        }
+
         this.applicationYamlPath = resolveApplicationYamlPath();
-        ensureRegistrationConfig();
+        reload();
     }
 
-    public ManagerRegistrationConfig currentConfig() {
+    public ManagerRegistrationConfigSnapshot reload() {
         synchronized (lock) {
-            return readConfig(loadRoot());
+            snapshot = readSnapshot();
+            return snapshot;
         }
     }
 
-    public ManagerRegistrationConfig ensureRegistrationConfig() {
-        synchronized (lock) {
-            Map<String, Object> root = loadRoot();
-            ManagerRegistrationConfig config = readConfig(root);
-            boolean changed = false;
-
-            if (!isValidVerificationCode(config.verificationCode())) {
-                config = new ManagerRegistrationConfig(generateVerificationCode(), config.enabled());
-                writeConfig(root, config);
-                changed = true;
-            }
-
-            if (!containsEnabledFlag(root)) {
-                writeConfig(root, config);
-                changed = true;
-            }
-
-            if (changed) {
-                saveRoot(root);
-            }
-
-            return config;
+    public ManagerRegistrationConfigSnapshot currentSnapshot() {
+        ManagerRegistrationConfigSnapshot current = snapshot;
+        if (current != null) {
+            return current;
         }
+        return reload();
     }
 
-    private boolean containsEnabledFlag(Map<String, Object> root) {
-        return registrationMap(root).containsKey("is-enable");
+    public Optional<ManagerRegistrationAccountConfig> findEnabledAccount(String username) {
+        String normalizedUsername = normalizeUsername(username);
+        if (normalizedUsername.isBlank()) {
+            return Optional.empty();
+        }
+
+        ManagerRegistrationConfigSnapshot current = currentSnapshot();
+        if (!current.enabled()) {
+            return Optional.empty();
+        }
+
+        return current.accounts().stream()
+                .filter(ManagerRegistrationAccountConfig::enabled)
+                .filter(account -> normalizedUsername.equals(account.username()))
+                .findFirst();
     }
 
-    private ManagerRegistrationConfig readConfig(Map<String, Object> root) {
+    public List<ManagerRegistrationAccountConfig> enabledAccounts() {
+        ManagerRegistrationConfigSnapshot current = currentSnapshot();
+        if (!current.enabled()) {
+            return List.of();
+        }
+
+        return current.accounts().stream()
+                .filter(ManagerRegistrationAccountConfig::enabled)
+                .toList();
+    }
+
+    private ManagerRegistrationConfigSnapshot readSnapshot() {
+        Map<String, Object> root = loadRoot();
         Map<String, Object> registration = registrationMap(root);
-        String fallbackVerificationCode = appProperties.getAuth().getManagerRegistration().getVerificationCode();
         boolean fallbackEnabled = appProperties.getAuth().getManagerRegistration().isEnable();
-        String verificationCode = normalizeVerificationCode(
-                Objects.toString(registration.getOrDefault("verification-code", fallbackVerificationCode), "")
-        );
         boolean enabled = parseBoolean(registration.get("is-enable"), fallbackEnabled);
-        return new ManagerRegistrationConfig(verificationCode, enabled);
+        List<ManagerRegistrationAccountConfig> accounts = readAccounts(registration);
+        return new ManagerRegistrationConfigSnapshot(enabled, accounts, applicationYamlPath.toString(), Instant.now());
     }
 
-    private void writeConfig(Map<String, Object> root, ManagerRegistrationConfig config) {
-        Map<String, Object> registration = registrationMap(root);
-        registration.put("verification-code", config.verificationCode());
-        registration.put("is-enable", config.enabled());
+    private List<ManagerRegistrationAccountConfig> readAccounts(Map<String, Object> registration) {
+        Object rawAccounts = registration.get("accounts");
+        if (!(rawAccounts instanceof List<?> accountList)) {
+            return appProperties.getAuth().getManagerRegistration().getAccounts().stream()
+                    .map(account -> new ManagerRegistrationAccountConfig(
+                            normalizeUsername(account.getUsername()),
+                            normalizeDisplayName(account.getDisplayName(), normalizeUsername(account.getUsername())),
+                            account.isEnable()
+                    ))
+                    .filter(account -> !account.username().isBlank())
+                    .toList();
+        }
+
+        return accountList.stream()
+                .filter(Map.class::isInstance)
+                .map(Map.class::cast)
+                .map(account -> new ManagerRegistrationAccountConfig(
+                        normalizeUsername(Objects.toString(account.get("username"), "")),
+                        normalizeDisplayName(
+                                Objects.toString(account.get("display-name"), ""),
+                                normalizeUsername(Objects.toString(account.get("username"), ""))
+                        ),
+                        parseBoolean(account.get("is-enable"), false)
+                ))
+                .filter(account -> !account.username().isBlank())
+                .toList();
     }
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> registrationMap(Map<String, Object> root) {
-        Map<String, Object> app = nestedMap(root, "app");
-        Map<String, Object> auth = nestedMap(app, "auth");
-        return nestedMap(auth, "manager-registration");
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> nestedMap(Map<String, Object> root, String key) {
-        Object current = root.get(key);
-        if (current instanceof Map<?, ?> map) {
-            return (Map<String, Object>) map;
+        Object app = root.get("app");
+        if (!(app instanceof Map<?, ?> appMap)) {
+            return Map.of();
         }
 
-        Map<String, Object> created = new LinkedHashMap<>();
-        root.put(key, created);
-        return created;
+        Object auth = appMap.get("auth");
+        if (!(auth instanceof Map<?, ?> authMap)) {
+            return Map.of();
+        }
+
+        Object registration = authMap.get("manager-registration");
+        if (!(registration instanceof Map<?, ?> registrationMap)) {
+            return Map.of();
+        }
+
+        return (Map<String, Object>) registrationMap;
     }
 
     private Map<String, Object> loadRoot() {
@@ -141,14 +176,6 @@ public class ApplicationYamlManagerRegistrationStore {
         return result;
     }
 
-    private void saveRoot(Map<String, Object> root) {
-        try (Writer writer = Files.newBufferedWriter(applicationYamlPath, StandardCharsets.UTF_8)) {
-            yaml.dump(root, writer);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to write application.yaml", exception);
-        }
-    }
-
     private Path resolveApplicationYamlPath() {
         return CANDIDATE_PATHS.stream()
                 .map(Path::toAbsolutePath)
@@ -167,18 +194,23 @@ public class ApplicationYamlManagerRegistrationStore {
         return fallback;
     }
 
-    private String normalizeVerificationCode(String value) {
+    private String normalizeUsername(String value) {
         return value == null ? "" : value.trim();
     }
 
-    private boolean isValidVerificationCode(String value) {
-        return value != null && value.matches("\\d{6}");
+    private String normalizeDisplayName(String value, String fallbackUsername) {
+        String normalized = value == null ? "" : value.trim();
+        return normalized.isBlank() ? fallbackUsername : normalized;
     }
 
-    private String generateVerificationCode() {
-        return String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+    public record ManagerRegistrationConfigSnapshot(
+            boolean enabled,
+            List<ManagerRegistrationAccountConfig> accounts,
+            String source,
+            Instant loadedAt
+    ) {
     }
 
-    public record ManagerRegistrationConfig(String verificationCode, boolean enabled) {
+    public record ManagerRegistrationAccountConfig(String username, String displayName, boolean enabled) {
     }
 }

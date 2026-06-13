@@ -15,8 +15,11 @@ app:
   auth:
     session-ttl-hours: 8
     manager-registration:
-      verification-code: '399190'
       is-enable: false
+      accounts:
+      - username: owner
+        display-name: 服主
+        is-enable: false
   servers:
     poll-interval-seconds: 8
     list-refresh-interval-seconds: 15

@@ -35,8 +35,6 @@ export function useSession() {
       });
       session.value = response;
       storeToken(response.token);
-      selectedServerId.value = request.serverId;
-      storeServerId(request.serverId);
       return response;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {

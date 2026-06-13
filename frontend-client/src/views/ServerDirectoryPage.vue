@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { Button, Card, Input, Loading } from 'animal-island-vue';
+import { Button, Card, Loading } from 'animal-island-vue';
 import { RouterLink } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import CreateServerModal from '@/components/CreateServerModal.vue';
@@ -13,14 +13,12 @@ const directory = useServerDirectory();
 const sessionState = useSession();
 const showCreate = ref(false);
 const showLogin = ref(false);
-const loginServerId = ref('MilkWind');
 const errorMessage = ref('');
 
 const hasManagerAccess = computed(() => sessionState.isAuthenticated.value);
 
 onMounted(async () => {
   await sessionState.loadCurrentSession();
-  loginServerId.value = sessionState.selectedServerId.value || 'MilkWind';
   if (hasManagerAccess.value) {
     await directory.loadServers();
   } else {
@@ -30,7 +28,6 @@ onMounted(async () => {
 
 watch(hasManagerAccess, async (isAuthenticated, wasAuthenticated) => {
   if (isAuthenticated && !wasAuthenticated) {
-    loginServerId.value = sessionState.selectedServerId.value || loginServerId.value || 'MilkWind';
     await directory.loadServers();
   }
 
@@ -48,18 +45,12 @@ function openCreateFlow() {
 }
 
 function openLogin() {
-  if (!loginServerId.value.trim()) {
-    errorMessage.value = '请先输入目标服务器 ID，再打开管理员登录。';
-    return;
-  }
-
   errorMessage.value = '';
   showLogin.value = true;
 }
 
 function onLoginSuccess() {
   showLogin.value = false;
-  loginServerId.value = sessionState.selectedServerId.value || loginServerId.value;
 }
 
 async function createServer(payload: CreateManagedServerRequest) {
@@ -77,7 +68,7 @@ async function createServer(payload: CreateManagedServerRequest) {
 <template>
   <AppShell
     title="服务器目录"
-    subtitle="管理员绑定私有注册链接后可在此登录。访客可以直接打开任意访客路线。"
+    subtitle="管理员通过公开专属注册链接绑定 2FA 后，可在此输入动态码登录。访客可以直接打开任意访客路线。"
   >
     <template #header-actions>
       <Button v-if="hasManagerAccess" type="primary" size="large" @click="openCreateFlow">创建受管服务器</Button>
@@ -107,11 +98,10 @@ async function createServer(payload: CreateManagedServerRequest) {
     <Card v-else class="auth-card">
       <h3>管理员登录</h3>
       <p>
-        使用私有管理员注册流程中创建的用户名、密码和验证器动态码登录。登录后即可选择要管理的服务器。
+        使用已绑定管理员账号的验证器动态码登录。登录后即可选择要管理的服务器。
       </p>
-      <Input v-model="loginServerId" placeholder="服务器 ID，例如 MilkWind" />
       <div class="auth-actions">
-        <Button type="primary" :disabled="!loginServerId.trim()" @click="openLogin">继续登录</Button>
+        <Button type="primary" @click="openLogin">输入动态码登录</Button>
       </div>
     </Card>
 
@@ -124,7 +114,6 @@ async function createServer(payload: CreateManagedServerRequest) {
 
     <LoginModal
       v-model:open="showLogin"
-      :server-id="loginServerId.trim()"
       @close="showLogin = false"
       @success="onLoginSuccess"
     />

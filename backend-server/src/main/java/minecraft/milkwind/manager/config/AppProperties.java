@@ -25,7 +25,15 @@ public class AppProperties {
     @Getter
     @Setter
     public static class ManagerRegistration {
-        private String verificationCode = "";
+        private boolean isEnable = false;
+        private List<ManagerRegistrationAccount> accounts = new ArrayList<>();
+    }
+
+    @Getter
+    @Setter
+    public static class ManagerRegistrationAccount {
+        private String username;
+        private String displayName;
         private boolean isEnable = false;
     }
 
