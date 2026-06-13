@@ -1,28 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Card, Table } from 'animal-island-vue';
+import { Card } from 'animal-island-vue';
 import type { ServerSnapshot } from '@/types/api';
 
-const props = defineProps<{
+defineProps<{
   snapshot: ServerSnapshot | null;
   managerView?: boolean;
 }>();
-
-const metricsColumns = [
-  { title: '指标', dataIndex: 'label' },
-  { title: '数值', dataIndex: 'value' },
-] as const;
-
-const metricsRows = computed(() =>
-  props.snapshot
-    ? [
-        { label: 'CPU', value: `${props.snapshot.metrics.cpuUsagePercent.toFixed(1)}%` },
-        { label: '内存', value: `${props.snapshot.metrics.memoryUsedMb} / ${props.snapshot.metrics.memoryMaxMb} MB` },
-        { label: '入站', value: `${props.snapshot.metrics.networkInboundKbps.toFixed(1)} KB/s` },
-        { label: '出站', value: `${props.snapshot.metrics.networkOutboundKbps.toFixed(1)} KB/s` },
-      ]
-    : [],
-);
 </script>
 
 <template>
@@ -36,11 +19,6 @@ const metricsRows = computed(() =>
       <p v-if="snapshot.restartRecommended" class="restart-warning">资源状态已变化，建议重启服务器。</p>
       <p v-if="managerView && snapshot.rootDirectory"><strong>根目录：</strong>{{ snapshot.rootDirectory }}</p>
       <p v-if="managerView && snapshot.jvmArguments"><strong>JVM：</strong>{{ snapshot.jvmArguments }}</p>
-    </Card>
-
-    <Card class="panel metrics-panel">
-      <h3>性能概览</h3>
-      <Table :columns="metricsColumns as any" :data-source="metricsRows as any" :show-header="false" />
     </Card>
 
     <Card class="panel">
@@ -104,17 +82,13 @@ const metricsRows = computed(() =>
 }
 
 .status-panel {
-  grid-column: span 4;
+  grid-column: span 12;
 }
 
-.metrics-panel {
-  grid-column: span 8;
-}
-
+.panel:nth-child(2),
 .panel:nth-child(3),
 .panel:nth-child(4),
-.panel:nth-child(5),
-.panel:nth-child(6) {
+.panel:nth-child(5) {
   grid-column: span 4;
 }
 
@@ -160,16 +134,6 @@ const metricsRows = computed(() =>
   font-weight: 700;
 }
 
-.metric-table {
-  width: 100%;
-}
-
-.metric-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-}
-
 .asset-list li,
 .log-list li {
   border-radius: var(--animal-border-radius-base);
@@ -190,11 +154,10 @@ const metricsRows = computed(() =>
 
 @media (max-width: 1100px) {
   .status-panel,
-  .metrics-panel,
+  .panel:nth-child(2),
   .panel:nth-child(3),
   .panel:nth-child(4),
-  .panel:nth-child(5),
-  .panel:nth-child(6) {
+  .panel:nth-child(5) {
     grid-column: span 12;
   }
 }

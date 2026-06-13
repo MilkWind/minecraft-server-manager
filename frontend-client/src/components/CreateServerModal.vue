@@ -48,7 +48,7 @@ function submit() {
     <p class="modal-copy">填写服务器目录和基础信息后，将其纳入当前管理系统。</p>
 
     <div class="form-grid">
-      <Input v-model="form.serverId" placeholder="server id" />
+      <Input v-model="form.serverId" placeholder="服务器 ID" />
       <Input v-model="form.displayName" placeholder="显示名称" />
       <Input v-model="form.rootDirectory" placeholder="服务器根目录" />
       <Input v-model="form.publicAddress" placeholder="公网地址" />

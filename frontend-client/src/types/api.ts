@@ -71,14 +71,6 @@ export interface LogEntry {
   publicVisible: boolean;
 }
 
-export interface ServerMetrics {
-  cpuUsagePercent: number;
-  memoryUsedMb: number;
-  memoryMaxMb: number;
-  networkInboundKbps: number;
-  networkOutboundKbps: number;
-}
-
 export interface CustomCommand {
   id: string;
   displayName: string;
@@ -100,7 +92,6 @@ export interface ServerSnapshot {
   mods: ManagedAsset[];
   datapacks: ManagedAsset[];
   chatMessages: LogEntry[];
-  metrics: ServerMetrics;
   restartRecommended: boolean;
   rootDirectory: string | null;
   jvmArguments: string | null;

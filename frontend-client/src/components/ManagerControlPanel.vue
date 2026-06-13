@@ -263,7 +263,7 @@ function onAssetToggle(assetId: string, nextEnabled: boolean) {
           <div class="form-grid">
             <Input v-model="commandForm.displayName" placeholder="命令名称" />
             <Input v-model="commandForm.commandText" placeholder="实际命令，例如 say hello" />
-            <Input v-model="commandForm.description" class="wide-input" placeholder="描述（可选）" />
+            <Input v-model="commandForm.description" class="wide-input" placeholder="备注（可选）" />
           </div>
           <div class="button-row">
             <Button type="primary" :disabled="busy" @click="submitCommand">
@@ -277,7 +277,7 @@ function onAssetToggle(assetId: string, nextEnabled: boolean) {
               <div class="command-copy">
                 <strong>{{ command.displayName }}</strong>
                 <p>{{ command.commandText }}</p>
-                <small>{{ command.description || '无描述' }}</small>
+                <small>{{ command.description || '无备注' }}</small>
               </div>
               <div class="button-row">
                 <Button :disabled="busy" @click="emit('executeCommand', command.commandText)">执行</Button>

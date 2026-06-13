@@ -1,48 +1,45 @@
 # Design Implementation Verification Report
 
-Date: 2026-06-09
+Date: 2026-06-13
 
 Reference document: `design-complete.md`
 
+Decision supplement: `decisions-for-report.md`
+
 ## 1. Scope and method
 
-This report compares the current repository implementation against the design record in `design-complete.md`.
+This report compares the current repository implementation against `design-complete.md`, adjusted by the explicit answers in `decisions-for-report.md`.
 
 Assessment method:
 
-- `FULL`: implemented and aligned with the design intent.
+- `FULL`: implemented and aligned with the design intent or the accepted decision supplement.
 - `PARTIAL`: implemented in a limited, weaker, or materially different way.
 - `MISSING`: not implemented or not evidenced in the current repository.
+- `SUPERSEDED`: the original design item was intentionally removed or changed by `decisions-for-report.md`; it is not counted as an implementation gap.
 
-Estimated scoring rule:
+Estimated decision-adjusted overall matching degree: `98%`
 
-- `FULL` = 100%
-- `PARTIAL` = 50%
-- `MISSING` = 0%
-
-Estimated overall matching degree: `83%`
-
-This is an engineering estimate, not a formal compliance score.
+This is an engineering estimate, not a formal compliance score. The remaining known non-decision gap is HTTPS-only deployment enforcement in the sample Caddy configuration.
 
 ## 2. Build and validation status
 
 - Frontend build status: `PASS`
   - Verified with `pnpm build` after redirecting `HOME`, `USERPROFILE`, `LOCALAPPDATA`, `TEMP`, and `TMP` to repo-local paths.
 - Backend compile status: `PASS`
-  - Verified with `mvn "-Dmaven.repo.local=../.m2/repository" -o compile`.
-- Backend test status: `NOT FULLY VERIFIED`
-  - `mvn test` could not complete because the sandbox blocks network access and the local Maven cache does not contain all required Surefire dependencies.
+  - Verified with `mvn "-Dmaven.repo.local=D:\development-projects\personal-projects\minecraft-server-manager\.m2\repository" -o compile`.
+- Backend test status: `PASS`
+  - Verified with `mvn "-Dmaven.repo.local=D:\development-projects\personal-projects\minecraft-server-manager\.m2\repository" -o test` after setting `MAVEN_OPTS=-Djava.io.tmpdir=D:\development-projects\personal-projects\minecraft-server-manager\.codex-temp` and redirecting `TEMP`/`TMP` to the repo-local temp directory.
 
 ## 3. Category summary
 
-| Category | Estimated match |
+| Category | Estimated decision-adjusted match |
 | --- | --- |
 | Product goals | 100% |
-| Visitor goals | 93% |
-| Manager goals | 88% |
-| Routing, auth, authorization, API rules | 79% |
-| Backend/runtime/logging/metrics | 69% |
-| Architecture, storage, deployment, conventions | 87% |
+| Visitor goals | 100% |
+| Manager goals | 100% |
+| Routing, auth, authorization, API rules | 100% |
+| Backend/runtime/logging | 100% |
+| Architecture, storage, deployment, conventions | 94% |
 
 ## 4. Goal-by-goal assessment
 
@@ -51,7 +48,7 @@ This is an engineering estimate, not a formal compliance score.
 | Goal | Status | Match | Current situation |
 | --- | --- | --- | --- |
 | Manage multiple Minecraft servers from one web application | FULL | 100% | Multiple servers are modeled in `server_config`, routed by `serverId`, listed by `ServerCatalogService`, and rendered in frontend server pages. |
-| Expose safe public information to visitors | FULL | 100% | Public APIs are under `/api/public/**`; public snapshot excludes root directory, JVM args, custom commands, and full logs. |
+| Expose safe public information to visitors | FULL | 100% | Public APIs are under `/api/public/**`; public snapshots exclude root directory, JVM args, custom commands, and full logs. |
 | Expose administrative controls only to authenticated managers | FULL | 100% | Manager APIs require authentication through Spring Security and `ManagerAuthenticationFilter`. |
 | Keep deployment simple and low-cost | FULL | 100% | Single frontend, single backend, SQLite, polling, local Caddy reverse proxy config. |
 | Use a design suitable for a small number of servers and viewers | FULL | 100% | Implementation is intentionally lightweight and not multi-tenant. |
@@ -60,19 +57,19 @@ This is an engineering estimate, not a formal compliance score.
 
 | Goal | Status | Match | Current situation |
 | --- | --- | --- | --- |
-| View online players | FULL | 100% | Player list is exposed in public snapshot and rendered in `ServerOverview.vue`. |
-| View loaded mods | FULL | 100% | `ServerAssetService.listMods()` scans the managed server `mods` directory and public snapshot exposes the result. |
-| View loaded datapacks | FULL | 100% | `ServerAssetService.listDatapacks()` scans `world/datapacks` and public snapshot exposes the result. |
+| View online players | FULL | 100% | Player list is exposed in public snapshots and rendered in `ServerOverview.vue`. |
+| View loaded mods | FULL | 100% | `ServerAssetService.listMods()` scans the managed server `mods` directory and public snapshots expose the result. |
+| View loaded datapacks | FULL | 100% | `ServerAssetService.listDatapacks()` scans `world/datapacks` and public snapshots expose the result. |
 | View server game version | FULL | 100% | `gameVersion` is stored in `server_config`, returned by snapshot APIs, and shown in the UI. |
-| View server chat messages | FULL | 100% | Chat lines are parsed from server output and public snapshot includes only filtered chat entries. |
-| View server performance data: CPU, memory, network speed | PARTIAL | 50% | UI and API exist, but memory is measured from the backend JVM instead of the Minecraft process, and network speed is not based on real traffic volume. |
+| View server chat messages | FULL | 100% | Chat lines are parsed from server output and public snapshots include only filtered chat entries. |
+| View server performance data: CPU, memory, network speed | SUPERSEDED | N/A | Removed per answers 1 and 6. Backend metrics DTO/service/runtime-state fields were removed, snapshots no longer contain `metrics`, and the frontend performance panel was removed. |
 | Visitors cannot perform any control action | FULL | 100% | Public API surface is read-only; control APIs are manager-only. |
 
 ### 4.3 Manager goals
 
 | Goal | Status | Match | Current situation |
 | --- | --- | --- | --- |
-| Use all visitor features | FULL | 100% | Manager snapshot contains the visitor snapshot data plus manager-only fields. |
+| Use all visitor features | FULL | 100% | Manager snapshots contain the visitor snapshot data plus manager-only fields. |
 | View full server logs | FULL | 100% | Manager logs are read from `logs/latest.log` and the rotated `*.log.gz` history through `ServerLogService`. |
 | One-click copy for logs | FULL | 100% | `ManagerControlPanel.vue` provides clipboard copy for the current log list. |
 | Start server | FULL | 100% | Implemented by `/power/start` and `ServerProcessService.start()`. |
@@ -85,9 +82,9 @@ This is an engineering estimate, not a formal compliance score.
 | Send messages to a specific player | FULL | 100% | Implemented by `/messages` with `msg <player>`. |
 | Suspend mods and datapacks | FULL | 100% | Implemented by moving assets into `_manager_disabled` folders. |
 | Resume mods and datapacks | FULL | 100% | Implemented by moving assets back from `_manager_disabled`. |
-| Restart server after asset state changes | PARTIAL | 50% | The system marks `restartRecommended` and exposes restart controls, but restart is not automatic or enforced as part of the asset action flow. |
-| Define server-specific custom commands | FULL | 100% | Custom commands are persisted per server in SQLite. |
-| Execute server-specific custom commands | PARTIAL | 50% | The UI can execute saved commands, but execution goes through raw command text instead of validating a saved command identity on the backend. |
+| Restart server after asset state changes | FULL | 100% | Retained per answer 2: asset changes set `restartRecommended` and the UI prompts managers to restart manually; the program layer does not auto-restart servers. |
+| Define server-specific custom commands | FULL | 100% | Custom commands are persisted per server in SQLite with display name, command text, and a UI remark field. |
+| Execute server-specific custom commands | FULL | 100% | Retained per answer 5: managers may execute arbitrary server console commands, including saved commands invoked later from the command list. |
 | Configure JVM parameters for each server | FULL | 100% | Config form updates `jvmArguments`, and process launch uses those arguments. |
 | Add a new managed server by specifying its server root directory | FULL | 100% | `CreateManagedServerRequest` and `/api/manager/servers` support this flow. |
 
@@ -99,34 +96,34 @@ This is an engineering estimate, not a formal compliance score.
 | Manager directory route exists | FULL | 100% | Frontend includes `/servers` as the manager directory page. |
 | Route structure is not a security boundary | FULL | 100% | Backend auth is enforced independently of route shape. |
 | Every manager API validates authentication | FULL | 100% | All non-public APIs require authentication under Spring Security. |
-| Every manager API validates target `serverId` where applicable | FULL | 100% | Service methods call `requireServerConfig(serverId)` before acting. |
-| Visitor APIs expose only public-safe data | FULL | 100% | Public snapshot omits manager-only fields and there is no public log endpoint. |
+| Every manager API validates target `serverId` where applicable | FULL | 100% | Service methods validate target server IDs before acting. |
+| Visitor APIs expose only public-safe data | FULL | 100% | Public snapshots omit manager-only fields and there is no public log endpoint. |
 | Manager features are not protected only by hidden frontend UI | FULL | 100% | Backend enforcement is present; frontend hiding is only UX. |
 | Manager access requires 2FA | FULL | 100% | Login requires username, password, and TOTP code; registration provisions TOTP. |
-| Backend creates a session-bound authentication token | PARTIAL | 50% | Backend creates a persisted bearer token with expiry, but the system is stateless and the token is not bound to an HTTP session lifecycle. |
-| Each manager has an exclusive token | FULL | 100% | Existing sessions for the username are revoked on login before a new token is issued. |
-| Logout invalidates the current token | FULL | 100% | Logout deletes the session record. |
-| If the session changes or becomes invalid, the token is deprecated | PARTIAL | 50% | Token expiry and deletion are implemented, but there is no real session-bound invalidation model because the app uses stateless bearer auth. |
-| After invalidation, manager must log in again | FULL | 100% | Expired or deleted tokens return unauthenticated and the frontend clears local session state. |
+| Backend creates a session-bound authentication token | FULL | 100% | Answers 3 and 4 supersede HTTP-session binding. The backend remains stateless, creates a persisted expiring bearer token, and does not couple tokens to an HTTP session lifecycle. |
+| Each manager has an exclusive token | FULL | 100% | Existing tokens for the username are revoked on login before a new token is issued. |
+| Logout invalidates the current token | FULL | 100% | Backend `/api/manager/auth/logout` deletes the current token record; frontend logout calls it and clears local token/server state. |
+| If the session changes or becomes invalid, the token is deprecated | FULL | 100% | Answers 3 and 4 keep the current token-expiration/deletion model. Expired, deleted, or missing tokens are treated as unauthenticated and require login again. |
+| After invalidation, manager must log in again | FULL | 100% | Expired or deleted tokens return unauthenticated and the frontend clears local auth state. |
 | State-changing manager APIs exist for power, player actions, messages, assets, and custom commands | FULL | 100% | API surface matches the design categories. |
-| Backend validates command identity where applicable | PARTIAL | 50% | CRUD operations validate command ownership by `serverId`, but command execution uses freeform text instead of command ID based validation. |
+| Backend validates command identity where applicable | FULL | 100% | Answer 5 accepts arbitrary manager-entered commands. CRUD still validates saved command ownership by `serverId`; freeform execution validates manager auth, target server, and nonblank command text before writing only to the Minecraft console. |
 
-### 4.5 Backend, runtime, logging, and metrics
+### 4.5 Backend, runtime, logging, and monitoring
 
 | Goal | Status | Match | Current situation |
 | --- | --- | --- | --- |
-| Authentication and authorization handled by backend | FULL | 100% | Implemented by Spring Security, auth services, and manager session persistence. |
+| Authentication and authorization handled by backend | FULL | 100% | Implemented by Spring Security, auth services, and persisted token records. |
 | Server discovery and configuration lookup | FULL | 100% | Config is stored in SQLite and bootstrapped from `application.yaml`. |
-| Polling or collecting runtime information | FULL | 100% | Frontend polls snapshots; backend scheduled refresh triggers player list updates. |
+| Polling or collecting runtime information | FULL | 100% | Frontend polls snapshots; backend scheduled refresh triggers player-list updates. Performance metric collection was intentionally removed by answers 1 and 6. |
 | Reading server output | FULL | 100% | `ServerProcessService` reads process stdout and parses lines. |
 | Sending commands to Minecraft server consoles | FULL | 100% | Commands are written to the managed process stdin. |
-| Persisting manager auth data | FULL | 100% | Manager users and manager sessions are stored in SQLite. |
-| Persisting custom command metadata | FULL | 100% | `custom_command` table stores per-server command metadata. |
+| Persisting manager auth data | FULL | 100% | Manager users and bearer-token records are stored in SQLite. |
+| Persisting custom command metadata | FULL | 100% | `custom_command` table stores per-server command metadata and remarks. |
 | Full logs are manager-only | FULL | 100% | Only manager APIs expose logs, and those logs are assembled from `logs/latest.log` and rotated `*.log.gz` files. |
 | Visitor chat is filtered from server output | FULL | 100% | Chat parsing is separate from full log display. |
-| CPU usage reflects server runtime | FULL | 100% | CPU uses `ProcessHandle.info().totalCpuDuration()` for the managed server process. |
-| Memory usage reflects server runtime | MISSING | 0% | Memory is currently read from the backend JVM `Runtime`, not from the managed Minecraft process. |
-| Network speed reflects server runtime | MISSING | 0% | Current network calculation is based on interface metadata size, not real per-server traffic throughput. |
+| CPU usage reflects server runtime | SUPERSEDED | N/A | Removed per answers 1 and 6 together with all performance metric UI/API/runtime logic. |
+| Memory usage reflects server runtime | SUPERSEDED | N/A | Removed per answers 1 and 6 together with all performance metric UI/API/runtime logic. |
+| Network speed reflects server runtime | SUPERSEDED | N/A | Removed per answers 1 and 6 together with all performance metric UI/API/runtime logic. |
 | Polling is conservative | FULL | 100% | Snapshot polling is 6-8 seconds and player-list refresh is 15 seconds by default. |
 | Custom commands are restricted to Minecraft console input only | FULL | 100% | Command execution writes text to the Minecraft process only; there is no shell command execution path. |
 
@@ -150,45 +147,40 @@ This is an engineering estimate, not a formal compliance score.
 | Reverse proxy uses Caddy | FULL | 100% | `deploy/Caddyfile` and `deploy/README.md` are present. |
 | HTTPS termination is supported | FULL | 100% | Caddy deployment guidance expects HTTPS termination. |
 | Serve application only over HTTPS | PARTIAL | 50% | Deployment guidance recommends HTTPS, but the provided Caddyfile defaults to `localhost` and does not itself enforce a production-only HTTPS deployment rule. |
-| Code comments and annotations use English | FULL | 100% | Current backend code and most frontend source comments follow this convention. |
-| UI text uses Chinese | PARTIAL | 50% | Some views use Chinese, but major parts of the directory, login, and registration flows still use English UI copy. |
+| Code comments and annotations use English | FULL | 100% | Current backend code and frontend source comments follow this convention. |
+| UI text uses Chinese | FULL | 100% | Verified frontend-owned Vue titles, subtitles, placeholders, buttons, modal copy, and seeded custom command labels/descriptions. Technical abbreviations such as `JVM`, `TOTP`, `QR`, and `OP` are intentionally retained. |
 
-## 5. Main mismatches and risks
+## 5. Decision outcomes and remaining risks
 
-### High-priority gaps
+### Accepted decision outcomes
 
-1. Runtime metrics are not design-complete.
-   - Memory metrics show backend JVM memory, not Minecraft server memory.
-   - Network speed is not calculated from real traffic.
-   - This directly weakens both visitor and manager monitoring goals.
+1. Performance metrics were removed.
+   - The backend no longer contains `ServerMetricsService`, `ServerRuntimeMetrics`, or `ServerMetricsDto`.
+   - `ServerSnapshotDto` and frontend `ServerSnapshot` no longer contain `metrics`.
+   - `ServerOverview.vue` no longer renders CPU, memory, or network speed.
 
-2. Authentication model does not fully match the design wording.
-   - The design describes a session-bound token.
-   - The implementation uses a stateless bearer token stored in SQLite with TTL.
-   - This is secure enough for the current app shape, but it is not the same model.
+2. Asset changes prompt restart but do not auto-restart.
+   - Asset suspend/resume still marks `restartRecommended`.
+   - `ServerOverview.vue` and `ManagerControlPanel.vue` expose the restart prompt and manual restart control.
 
-### Medium-priority gaps
+3. Auth remains token-based and stateless.
+   - The backend keeps token generation, expiry, exclusive-token login, and logout invalidation.
+   - Spring Security remains `SessionCreationPolicy.STATELESS`; no HTTP session lifecycle is required.
 
-3. Custom command execution is not bound to stored command identity.
-   - Saved commands are executed as raw command text.
-   - Backend validation covers command CRUD ownership, but not "execute saved command X for server Y" as a distinct backend operation.
+4. Custom commands remain freeform console commands.
+   - Managers can enter arbitrary server console commands.
+   - Saved commands persist command text plus a UI remark for later invocation.
 
-4. Asset change flow does not include an integrated restart step.
-   - The system marks `restartRecommended` and lets the manager restart manually.
-   - This is operationally useful, but weaker than a full "change then restart" workflow.
+5. Frontend UI copy is Chinese.
+   - Directory, login, registration, workspace, overview, manager controls, create-server modal, and seeded command labels/descriptions were verified.
 
-5. UI language convention is incomplete.
-   - The design says UI text should use Chinese.
-   - Several user-facing flows still contain English text.
+### Remaining non-decision risk
+
+1. HTTPS-only serving is still a deployment-policy gap.
+   - The deployment docs support Caddy HTTPS termination, but the sample `deploy/Caddyfile` is still localhost-oriented and does not enforce a production-only HTTPS site address.
 
 ## 6. Final conclusion
 
-The current implementation is already strong on structure, route model, public-vs-manager separation, 2FA login, per-server management, server process control, asset toggling, and SQLite-backed configuration.
+After applying `decisions-for-report.md`, the implementation aligns with the accepted product shape: public visitor data, manager-only controls, 2FA manager login, token logout, manual restart prompts after asset changes, freeform/saved Minecraft console commands, and Chinese frontend UI copy.
 
-The repository is not yet fully aligned with `design-complete.md` in the areas that matter most for operational accuracy:
-
-- metrics correctness
-- exact auth-session model
-- backend-validated execution of saved custom commands
-
-If the target is "design-complete" rather than "feature-demo complete", those gaps should be treated as the remaining core work.
+The original runtime performance metrics requirement is intentionally removed rather than partially implemented. With that decision applied, the main remaining design-level caveat is production HTTPS enforcement in deployment configuration.

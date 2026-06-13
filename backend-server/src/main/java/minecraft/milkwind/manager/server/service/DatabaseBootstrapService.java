@@ -74,8 +74,8 @@ public class DatabaseBootstrapService {
             return;
         }
 
-        insertCommand(serverId, "Save World", "save-all", "Trigger an immediate world save", "admin");
-        insertCommand(serverId, "List Players", "list", "Query the current online player list", "admin");
+        insertCommand(serverId, "保存世界", "save-all", "立即触发一次世界保存", "admin");
+        insertCommand(serverId, "查询玩家", "list", "查询当前在线玩家列表", "admin");
     }
 
     private void insertCommand(String serverId, String displayName, String commandText, String description, String createdBy) {

@@ -9,16 +9,13 @@ import minecraft.milkwind.manager.server.dto.LogEntryDto;
 import minecraft.milkwind.manager.server.dto.PlayerDto;
 import minecraft.milkwind.manager.server.dto.PowerActionResultDto;
 import minecraft.milkwind.manager.server.dto.PublicServerSummaryDto;
-import minecraft.milkwind.manager.server.dto.ServerMetricsDto;
 import minecraft.milkwind.manager.server.dto.ServerSnapshotDto;
 import minecraft.milkwind.manager.server.entity.CustomCommandEntity;
 import minecraft.milkwind.manager.server.entity.ServerConfigEntity;
 import minecraft.milkwind.manager.server.mapper.CustomCommandMapper;
 import minecraft.milkwind.manager.server.mapper.ServerConfigMapper;
 import minecraft.milkwind.manager.server.runtime.ServerProcessService;
-import minecraft.milkwind.manager.server.runtime.ServerMetricsService;
 import minecraft.milkwind.manager.server.runtime.ServerRuntimeState;
-import minecraft.milkwind.manager.server.runtime.ServerRuntimeMetrics;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +31,6 @@ public class ServerCatalogService {
     private final CustomCommandMapper customCommandMapper;
     private final DatabaseBootstrapService databaseBootstrapService;
     private final ServerProcessService serverProcessService;
-    private final ServerMetricsService serverMetricsService;
     private final ServerAssetService serverAssetService;
     private final ServerLogService serverLogService;
 
@@ -43,7 +39,6 @@ public class ServerCatalogService {
             CustomCommandMapper customCommandMapper,
             DatabaseBootstrapService databaseBootstrapService,
             ServerProcessService serverProcessService,
-            ServerMetricsService serverMetricsService,
             ServerAssetService serverAssetService,
             ServerLogService serverLogService
     ) {
@@ -51,7 +46,6 @@ public class ServerCatalogService {
         this.customCommandMapper = customCommandMapper;
         this.databaseBootstrapService = databaseBootstrapService;
         this.serverProcessService = serverProcessService;
-        this.serverMetricsService = serverMetricsService;
         this.serverAssetService = serverAssetService;
         this.serverLogService = serverLogService;
     }
@@ -187,16 +181,6 @@ public class ServerCatalogService {
                 ? listCustomCommands(config.getServerId())
                 : List.of();
 
-        serverMetricsService.collect(config, runtime);
-        ServerRuntimeMetrics runtimeMetrics = runtime.getMetrics();
-        ServerMetricsDto metrics = new ServerMetricsDto(
-                runtimeMetrics.cpuUsagePercent(),
-                runtimeMetrics.memoryUsedMb(),
-                runtimeMetrics.memoryMaxMb(),
-                runtimeMetrics.networkInboundKbps(),
-                runtimeMetrics.networkOutboundKbps()
-        );
-
         return new ServerSnapshotDto(
                 config.getServerId(),
                 config.getDisplayName(),
@@ -208,7 +192,6 @@ public class ServerCatalogService {
                 serverAssetService.listMods(config),
                 serverAssetService.listDatapacks(config),
                 publicChatMessages,
-                metrics,
                 runtime.isRestartRecommended(),
                 managerView ? config.getRootDirectory() : null,
                 managerView ? config.getJvmArguments() : null,
