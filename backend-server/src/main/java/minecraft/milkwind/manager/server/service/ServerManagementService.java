@@ -5,6 +5,8 @@ import minecraft.milkwind.manager.common.exception.ApiException;
 import minecraft.milkwind.manager.common.time.TimeSupport;
 import minecraft.milkwind.manager.server.dto.AssetActionRequest;
 import minecraft.milkwind.manager.server.dto.AssetActionResultDto;
+import minecraft.milkwind.manager.server.dto.BatchAssetActionRequest;
+import minecraft.milkwind.manager.server.dto.BatchAssetActionResultDto;
 import minecraft.milkwind.manager.server.dto.CreateManagedServerRequest;
 import minecraft.milkwind.manager.server.dto.CreateManagedServerResultDto;
 import minecraft.milkwind.manager.server.dto.CustomCommandDto;
@@ -26,6 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -168,6 +171,22 @@ public class ServerManagementService {
         return result;
     }
 
+    public BatchAssetActionResultDto suspendAssets(String serverId, BatchAssetActionRequest request) {
+        ServerConfigEntity config = requireServerConfig(serverId);
+        BatchAssetActionResultDto result = serverAssetService.suspendAssets(config, requireAssetIds(request));
+        markRestartRecommended(serverId, config.getStatus());
+        serverCatalogService.refresh();
+        return result;
+    }
+
+    public BatchAssetActionResultDto resumeAssets(String serverId, BatchAssetActionRequest request) {
+        ServerConfigEntity config = requireServerConfig(serverId);
+        BatchAssetActionResultDto result = serverAssetService.resumeAssets(config, requireAssetIds(request));
+        markRestartRecommended(serverId, config.getStatus());
+        serverCatalogService.refresh();
+        return result;
+    }
+
     public PlayerActionResultDto opPlayer(String serverId, PlayerActionRequest request) {
         return performPlayerAction(serverId, "op", request, "OP authorization command sent");
     }
@@ -234,6 +253,18 @@ public class ServerManagementService {
 
     private String normalizeDescription(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private List<String> requireAssetIds(BatchAssetActionRequest request) {
+        if (request == null || request.assetIds() == null || request.assetIds().isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_ids", "Asset ids are required");
+        }
+
+        List<String> normalized = new ArrayList<>();
+        for (String assetId : request.assetIds()) {
+            normalized.add(requireText(assetId, "asset_id"));
+        }
+        return normalized;
     }
 
     private PlayerActionResultDto performPlayerAction(

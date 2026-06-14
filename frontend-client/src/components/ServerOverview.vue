@@ -1,47 +1,127 @@
 <script setup lang="ts">
-import { Card } from 'animal-island-vue';
+import { computed } from 'vue';
+import { Card, Icon, Collapse, Tooltip } from 'animal-island-vue';
 import type { ServerSnapshot } from '@/types/api';
 
-defineProps<{
+const props = defineProps<{
   snapshot: ServerSnapshot | null;
   managerView?: boolean;
 }>();
+
+const chatCount = computed(() => props.snapshot?.chatMessages?.length ?? 0);
+const playerCount = computed(() => props.snapshot?.onlinePlayers?.length ?? 0);
+const modCount = computed(() => props.snapshot?.mods?.length ?? 0);
+const datapackCount = computed(() => props.snapshot?.datapacks?.length ?? 0);
+
+function statusTooltip(status: string): string {
+  const s = status.toLowerCase();
+  if (s === 'running') return '服务器正在运行，玩家可以连接。';
+  if (s === 'stopped') return '服务器已停止，玩家无法连接。';
+  if (s === 'starting') return '服务器正在启动中，请稍候。';
+  if (s === 'restarting') return '服务器正在重启，短暂中断后恢复。';
+  if (s === 'error') return '服务器运行异常，请检查日志。';
+  return `当前服务器状态：${status}`;
+}
 </script>
 
 <template>
   <section v-if="snapshot" class="overview-grid">
-    <Card class="panel status-panel">
-      <h3>{{ snapshot.displayName }}</h3>
-      <p class="status-line"><strong>状态：</strong>{{ snapshot.status }}</p>
+    <Card
+      v-if="snapshot.restartRecommended"
+      color="app-orange"
+      type="dashed"
+      class="restart-banner"
+    >
+      <div class="restart-content">
+        <Icon name="icon-helicopter" :size="22" />
+        <div>
+          <strong>建议重启服务器</strong>
+          <p>资源状态已变化，建议执行重启以完整应用更改。</p>
+        </div>
+      </div>
+    </Card>
+
+    <Card color="app-teal" class="panel status-panel">
+      <h3>
+        <Icon name="icon-map" class="panel-icon" />
+        {{ snapshot.displayName }}
+      </h3>
+      <p class="status-line">
+        <Tooltip :title="statusTooltip(snapshot.status)">
+          <span><strong>状态：</strong>{{ snapshot.status }}</span>
+        </Tooltip>
+      </p>
       <p><strong>地址：</strong>{{ snapshot.publicAddress }}</p>
       <p><strong>版本：</strong>{{ snapshot.gameVersion }}</p>
       <p><strong>在线玩家：</strong>{{ snapshot.onlinePlayerCount }}</p>
-      <p v-if="snapshot.restartRecommended" class="restart-warning">资源状态已变化，建议重启服务器。</p>
       <p v-if="managerView && snapshot.rootDirectory"><strong>根目录：</strong>{{ snapshot.rootDirectory }}</p>
       <p v-if="managerView && snapshot.jvmArguments"><strong>JVM：</strong>{{ snapshot.jvmArguments }}</p>
     </Card>
 
-    <Card class="panel">
-      <h3>在线玩家</h3>
-      <ul v-if="snapshot.onlinePlayers.length" class="tag-list">
+    <Card color="app-yellow" class="panel players-panel">
+      <h3>
+        <Icon name="icon-chat" class="panel-icon" />
+        在线玩家
+      </h3>
+      <Collapse
+        v-if="playerCount > 5"
+        :question="`在线玩家 (${playerCount})`"
+        :default-expanded="true"
+      >
+        <ul class="tag-list">
+          <li v-for="player in snapshot.onlinePlayers" :key="player.name">{{ player.name }}</li>
+        </ul>
+      </Collapse>
+      <ul v-else-if="playerCount > 0" class="tag-list">
         <li v-for="player in snapshot.onlinePlayers" :key="player.name">{{ player.name }}</li>
       </ul>
       <p v-else class="empty-text">当前没有在线玩家。</p>
     </Card>
 
-    <Card class="panel">
-      <h3>聊天消息</h3>
-      <ul class="log-list">
+    <Card color="app-blue" class="panel chat-panel">
+      <h3>
+        <Icon name="icon-camera" class="panel-icon" />
+        聊天消息
+      </h3>
+      <Collapse
+        v-if="chatCount > 5"
+        :question="`聊天消息 (${chatCount})`"
+        :default-expanded="false"
+      >
+        <ul class="log-list">
+          <li v-for="entry in snapshot.chatMessages" :key="entry.id">
+            <time>{{ new Date(entry.timestamp).toLocaleString() }}</time>
+            <span>{{ entry.message }}</span>
+          </li>
+        </ul>
+      </Collapse>
+      <ul v-else-if="chatCount > 0" class="log-list">
         <li v-for="entry in snapshot.chatMessages" :key="entry.id">
           <time>{{ new Date(entry.timestamp).toLocaleString() }}</time>
           <span>{{ entry.message }}</span>
         </li>
       </ul>
+      <p v-else class="empty-text">暂无聊天消息。</p>
     </Card>
 
-    <Card class="panel">
-      <h3>模组</h3>
-      <ul v-if="snapshot.mods.length" class="asset-list">
+    <Card color="lime-green" class="panel mods-panel">
+      <h3>
+        <Icon name="icon-design" class="panel-icon" />
+        模组
+      </h3>
+      <Collapse
+        v-if="modCount > 5"
+        :question="`模组 (${modCount})`"
+        :default-expanded="false"
+      >
+        <ul class="asset-list">
+          <li v-for="asset in snapshot.mods" :key="asset.id">
+            <span>{{ asset.name }}</span>
+            <strong>{{ asset.enabled ? '启用' : '停用' }}</strong>
+          </li>
+        </ul>
+      </Collapse>
+      <ul v-else-if="modCount > 0" class="asset-list">
         <li v-for="asset in snapshot.mods" :key="asset.id">
           <span>{{ asset.name }}</span>
           <strong>{{ asset.enabled ? '启用' : '停用' }}</strong>
@@ -50,9 +130,24 @@ defineProps<{
       <p v-else class="empty-text">没有发现模组。</p>
     </Card>
 
-    <Card class="panel">
-      <h3>数据包</h3>
-      <ul v-if="snapshot.datapacks.length" class="asset-list">
+    <Card color="yellow-green" class="panel datapacks-panel">
+      <h3>
+        <Icon name="icon-variant" class="panel-icon" />
+        数据包
+      </h3>
+      <Collapse
+        v-if="datapackCount > 5"
+        :question="`数据包 (${datapackCount})`"
+        :default-expanded="false"
+      >
+        <ul class="asset-list">
+          <li v-for="asset in snapshot.datapacks" :key="asset.id">
+            <span>{{ asset.name }}</span>
+            <strong>{{ asset.enabled ? '启用' : '停用' }}</strong>
+          </li>
+        </ul>
+      </Collapse>
+      <ul v-else-if="datapackCount > 0" class="asset-list">
         <li v-for="asset in snapshot.datapacks" :key="asset.id">
           <span>{{ asset.name }}</span>
           <strong>{{ asset.enabled ? '启用' : '停用' }}</strong>
@@ -81,15 +176,51 @@ defineProps<{
   gap: 14px;
 }
 
+.restart-banner {
+  grid-column: span 12;
+}
+
+.restart-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.restart-content strong {
+  display: block;
+  color: #8f5f16;
+  font-size: 16px;
+}
+
+.restart-content p {
+  margin: 6px 0 0;
+  color: #8f5f16;
+  font-size: 14px;
+}
+
 .status-panel {
   grid-column: span 12;
 }
 
-.panel:nth-child(2),
-.panel:nth-child(3),
-.panel:nth-child(4),
-.panel:nth-child(5) {
+.players-panel {
   grid-column: span 4;
+}
+
+.chat-panel {
+  grid-column: span 4;
+}
+
+.mods-panel {
+  grid-column: span 3;
+}
+
+.datapacks-panel {
+  grid-column: span 3;
+}
+
+.panel-icon {
+  vertical-align: middle;
+  margin-right: 6px;
 }
 
 .panel h3,
@@ -102,14 +233,6 @@ defineProps<{
 .status-line,
 .empty-text {
   color: var(--animal-text-color-secondary);
-}
-
-.restart-warning {
-  border-radius: var(--animal-border-radius-base);
-  padding: 10px 12px;
-  background: rgba(245, 195, 28, 0.18);
-  color: #8f5f16;
-  font-weight: 800;
 }
 
 .tag-list,
@@ -154,10 +277,10 @@ defineProps<{
 
 @media (max-width: 1100px) {
   .status-panel,
-  .panel:nth-child(2),
-  .panel:nth-child(3),
-  .panel:nth-child(4),
-  .panel:nth-child(5) {
+  .players-panel,
+  .chat-panel,
+  .mods-panel,
+  .datapacks-panel {
     grid-column: span 12;
   }
 }

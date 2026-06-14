@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Button, Card, Input } from 'animal-island-vue';
+import { Button, Card, Input, Title, Divider, Typewriter, Icon } from 'animal-island-vue';
 import { RouterLink, useRoute } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import { apiRequest } from '@/lib/api';
@@ -84,6 +84,7 @@ function resetRegistration() {
 
 <template>
   <AppShell
+    icon="icon-miles"
     title="管理员 2FA 注册"
     subtitle="此公开注册链接绑定了一个后端配置中的管理员用户名。完成绑定后，登录只需要输入验证器动态码。"
     :manager-mode="true"
@@ -92,7 +93,7 @@ function resetRegistration() {
       <Card class="panel">
         <div class="panel-header">
           <p class="eyebrow">步骤 1</p>
-          <h2>生成验证器 QR 码</h2>
+          <Title size="small" color="app-teal">生成验证器 QR 码</Title>
         </div>
 
         <p class="panel-copy">
@@ -101,7 +102,13 @@ function resetRegistration() {
         </p>
 
         <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
-        <p v-if="successMessage" class="success-banner">{{ successMessage }}</p>
+        <div v-if="successMessage" class="success-typewriter">
+          <Typewriter
+            :text="successMessage"
+            :auto-play="true"
+            :speed="30"
+          />
+        </div>
 
         <div class="panel-actions">
           <Button type="default" :disabled="!qrPayload" @click="resetRegistration">重置</Button>
@@ -111,10 +118,12 @@ function resetRegistration() {
         </div>
       </Card>
 
+      <Divider type="line-teal" class="panel-divider" />
+
       <Card class="panel qr-panel">
         <div class="panel-header">
           <p class="eyebrow">步骤 2</p>
-          <h2>绑定并确认验证器</h2>
+          <Title size="small" color="app-teal">绑定并确认验证器</Title>
         </div>
 
         <template v-if="qrPayload">
@@ -148,7 +157,10 @@ function resetRegistration() {
           </p>
         </template>
 
-        <RouterLink to="/servers" class="directory-link">返回服务器目录</RouterLink>
+        <RouterLink to="/servers" class="directory-link">
+          <Icon name="icon-helicopter" :size="14" />
+          返回服务器目录
+        </RouterLink>
       </Card>
     </section>
   </AppShell>
@@ -171,7 +183,6 @@ function resetRegistration() {
   gap: 6px;
 }
 
-.panel-header h2,
 .panel-copy,
 .secret-box p {
   margin: 0;
@@ -205,22 +216,23 @@ function resetRegistration() {
   flex-wrap: wrap;
 }
 
-.error-banner,
-.success-banner {
+.error-banner {
   margin: 0;
   border-radius: var(--animal-border-radius-base);
   padding: 12px 14px;
   font-weight: 700;
-}
-
-.error-banner {
   background: rgba(224, 90, 90, 0.14);
   color: var(--animal-error-color);
 }
 
-.success-banner {
-  background: rgba(71, 166, 106, 0.16);
+.success-typewriter {
   color: #2f7c4b;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.panel-divider {
+  display: none;
 }
 
 .qr-panel {
@@ -251,6 +263,9 @@ function resetRegistration() {
 }
 
 .directory-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--animal-primary-color);
   font-weight: 700;
   text-decoration: none;
@@ -263,6 +278,10 @@ function resetRegistration() {
 
   .qr-image {
     width: min(100%, 280px);
+  }
+
+  .panel-divider {
+    display: block;
   }
 }
 </style>

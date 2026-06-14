@@ -1,28 +1,31 @@
 <script setup lang="ts">
-import { Card, Footer, Time } from 'animal-island-vue';
+import { Footer, Time, Title, Divider} from 'animal-island-vue';
+import type { IconName } from 'animal-island-vue';
 
 defineProps<{
   title: string;
   subtitle?: string;
   managerMode?: boolean;
+  icon?: IconName;
 }>();
 </script>
 
 <template>
   <div class="app-shell">
     <header class="hero">
-      <Card type="title" class="hero-card">
-        <div class="hero-copy">
-          <p class="eyebrow">{{ managerMode ? '管理控制台' : '访客视图' }}</p>
-          <h1>{{ title }}</h1>
-          <p v-if="subtitle">{{ subtitle }}</p>
+      <div class="hero-copy">
+        <p class="eyebrow">{{ managerMode ? '管理控制台' : '访客视图' }}</p>
+        <div class="title-row">
+          <Title size="large" color="app-green">{{ title }}</Title>
         </div>
-      </Card>
+      </div>
       <div class="hero-tools">
         <Time />
         <slot name="header-actions" />
       </div>
     </header>
+
+    <Divider type="line-brown" class="hero-divider" />
 
     <main class="content">
       <slot />
@@ -48,24 +51,10 @@ defineProps<{
   font-family: var(--animal-font-family);
 }
 
-.app-shell::before,
 .app-shell::after {
   position: absolute;
   pointer-events: none;
   content: '';
-}
-
-.app-shell::before {
-  right: -12%;
-  bottom: -22vh;
-  left: -12%;
-  z-index: -2;
-  height: 48vh;
-  background:
-    radial-gradient(85% 95% at 10% 22%, rgba(111, 186, 44, 0.36) 0 42%, transparent 43%),
-    radial-gradient(92% 90% at 54% 12%, rgba(130, 213, 187, 0.44) 0 44%, transparent 45%),
-    radial-gradient(86% 88% at 90% 24%, rgba(209, 218, 73, 0.28) 0 42%, transparent 43%);
-  filter: drop-shadow(0 -10px 24px rgba(61, 52, 40, 0.06));
 }
 
 .app-shell::after {
@@ -85,33 +74,20 @@ defineProps<{
   justify-content: space-between;
   gap: 24px;
   align-items: flex-start;
-  margin: 0 auto 24px;
+  margin: 0 auto 0;
   max-width: 1240px;
-}
-
-.hero-card {
-  flex: 1;
 }
 
 .hero-copy {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  flex: 1;
 }
 
-.hero-copy h1,
-.hero-copy p {
-  margin: 0;
-}
-
-.hero-copy h1 {
-  font-size: clamp(32px, 4vw, 50px);
-  line-height: 1.04;
-  color: var(--animal-warm-color-soft);
-}
-
-.hero-copy p {
-  color: var(--animal-text-color-secondary);
-  line-height: 1.6;
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .eyebrow {
@@ -120,12 +96,21 @@ defineProps<{
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  margin: 0;
 }
 
 .hero-tools {
   display: grid;
   justify-items: end;
   gap: 14px;
+  flex-shrink: 0;
+}
+
+.hero-divider {
+  position: relative;
+  z-index: 2;
+  margin: 18px auto 24px;
+  max-width: 1240px;
 }
 
 .content {
@@ -154,11 +139,6 @@ defineProps<{
       linear-gradient(180deg, #dff6e8 0%, #f8f8f0 52%, #f0e8d8 100%);
   }
 
-  .app-shell::before {
-    bottom: -26vh;
-    height: 40vh;
-  }
-
   .hero {
     flex-direction: column;
   }
@@ -166,6 +146,10 @@ defineProps<{
   .hero-tools {
     width: 100%;
     justify-items: start;
+  }
+
+  .hero-divider {
+    margin: 14px auto 20px;
   }
 }
 </style>

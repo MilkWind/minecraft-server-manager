@@ -118,3 +118,25 @@ export interface SendMessageRequest {
 export interface AssetActionRequest {
   assetId: string;
 }
+
+export interface AssetActionResult {
+  serverId: string;
+  assetId: string;
+  assetType: string;
+  action: string;
+  status: string;
+  message: string;
+}
+
+export interface BatchAssetActionRequest {
+  assetIds: string[];
+}
+
+export interface BatchAssetActionResult {
+  serverId: string;
+  action: string;
+  processedCount: number;
+  results: AssetActionResult[];
+  status: string;
+  message: string;
+}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Button } from 'animal-island-vue';
+import { Button, Divider } from 'animal-island-vue';
 import { useRoute } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import LoginModal from '@/components/LoginModal.vue';
@@ -102,6 +102,32 @@ async function onAssetToggle(payload: { assetId: string; nextEnabled: boolean })
   );
 }
 
+async function onBatchAssetToggle(payloads: { assetId: string; nextEnabled: boolean }[]) {
+  if (payloads.length === 0) return;
+
+  const nextEnabled = payloads[0].nextEnabled;
+  const assetIds = payloads.map((p) => p.assetId);
+
+  await guardAction(
+    () =>
+      nextEnabled
+        ? snapshotState.resumeAssets({ assetIds })
+        : snapshotState.suspendAssets({ assetIds }),
+    '鎵归噺璧勬簮鍒囨崲澶辫触銆?',
+  );
+  return;
+
+  for (const p of payloads) {
+    await guardAction(
+      () =>
+        p.nextEnabled
+          ? snapshotState.resumeAsset({ assetId: p.assetId })
+          : snapshotState.suspendAsset({ assetId: p.assetId }),
+      `批量操作资源 ${p.assetId} 失败。`,
+    );
+  }
+}
+
 async function onUpdateConfig(payload: UpdateServerConfigRequest) {
   await guardAction(() => snapshotState.updateServerConfig(payload), '保存服务器配置失败。');
 }
@@ -143,6 +169,7 @@ async function logout() {
 
 <template>
   <AppShell
+    icon="icon-design"
     :title="managerView ? '服务器管理台' : '服务器信息面板'"
     :subtitle="managerView ? '查看完整日志、控制服务端进程并执行管理操作。' : '查看服务器状态、玩家与公开聊天信息。'"
     :manager-mode="managerView"
@@ -162,6 +189,12 @@ async function logout() {
 
     <ServerOverview :snapshot="snapshotState.snapshot.value" :manager-view="managerView" />
 
+    <Divider
+      v-if="managerView && sessionState.isAuthenticated.value"
+      type="line-teal"
+      class="control-divider"
+    />
+
     <ManagerControlPanel
       v-if="managerView && sessionState.isAuthenticated.value"
       :snapshot="snapshotState.snapshot.value"
@@ -172,6 +205,7 @@ async function logout() {
       @player-action="onPlayerAction"
       @send-message="onSendMessage"
       @asset-toggle="onAssetToggle"
+      @batch-asset-toggle="onBatchAssetToggle"
       @update-config="onUpdateConfig"
       @create-command="onCreateCommand"
       @update-command="onUpdateCommand"
@@ -201,5 +235,9 @@ async function logout() {
   background: rgba(224, 90, 90, 0.14);
   color: var(--animal-error-color);
   font-weight: 700;
+}
+
+.control-divider {
+  margin: 18px 0;
 }
 </style>

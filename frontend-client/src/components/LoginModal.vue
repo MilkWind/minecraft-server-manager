@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Button, Input, Modal } from 'animal-island-vue';
+import { Button, Input, Modal, Tooltip } from 'animal-island-vue';
 import { useSession } from '@/composables/useSession';
 
 const props = defineProps<{
@@ -58,7 +58,9 @@ function close() {
 
     <form class="login-form" @submit.prevent="submit">
       <label>
-        <span>TOTP 动态码</span>
+        <Tooltip title="打开已绑定的验证器应用，输入当前显示的 6 位数字" placement="top">
+          <span>TOTP 动态码</span>
+        </Tooltip>
         <Input v-model="totpCode" :maxlength="6" placeholder="6 位验证器动态码" />
       </label>
 

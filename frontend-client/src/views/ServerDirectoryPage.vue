@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { Button, Card, Loading } from 'animal-island-vue';
+import { Button, Card, Loading, Icon, Divider, Collapse, Typewriter, Tooltip } from 'animal-island-vue';
 import { RouterLink } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
 import CreateServerModal from '@/components/CreateServerModal.vue';
@@ -16,6 +16,25 @@ const showLogin = ref(false);
 const errorMessage = ref('');
 
 const hasManagerAccess = computed(() => sessionState.isAuthenticated.value);
+
+function statusColor(status: string): 'app-green' | 'app-red' | 'app-yellow' | 'brown' | 'default' {
+  const s = status.toLowerCase();
+  if (s === 'running') return 'app-green';
+  if (s === 'stopped') return 'app-red';
+  if (s === 'starting' || s === 'restarting') return 'app-yellow';
+  if (s === 'error') return 'brown';
+  return 'default';
+}
+
+function statusLabel(status: string): string {
+  const s = status.toLowerCase();
+  if (s === 'running') return '运行中';
+  if (s === 'stopped') return '已停止';
+  if (s === 'starting') return '启动中';
+  if (s === 'restarting') return '重启中';
+  if (s === 'error') return '异常';
+  return status;
+}
 
 onMounted(async () => {
   await sessionState.loadCurrentSession();
@@ -67,6 +86,7 @@ async function createServer(payload: CreateManagedServerRequest) {
 
 <template>
   <AppShell
+    icon="icon-helicopter"
     title="服务器目录"
     subtitle="管理员通过公开专属注册链接绑定 2FA 后，可在此输入动态码登录。访客可以直接打开任意访客路线。"
   >
@@ -77,13 +97,46 @@ async function createServer(payload: CreateManagedServerRequest) {
     <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
     <Loading :active="directory.loading.value" />
 
-    <section v-if="hasManagerAccess" class="server-grid">
-      <Card v-for="server in directory.servers.value" :key="server.serverId" class="server-card">
-        <p class="card-status">{{ server.status }}</p>
-        <h3>{{ server.displayName }}</h3>
-        <p>{{ server.publicAddress }}</p>
-        <p>版本：{{ server.gameVersion }}</p>
-        <p>在线玩家：{{ server.onlinePlayerCount }}</p>
+    <Collapse
+      v-if="!hasManagerAccess"
+      question="管理员登录"
+      :default-expanded="true"
+      class="login-collapse"
+    >
+      <div class="auth-card">
+        <h3>管理员登录</h3>
+        <p>
+          使用已绑定管理员账号的验证器动态码登录。登录后即可选择要管理的服务器。
+        </p>
+        <div class="auth-actions">
+          <Button type="primary" @click="openLogin">输入动态码登录</Button>
+        </div>
+      </div>
+    </Collapse>
+
+    <Divider v-if="hasManagerAccess" type="wave-yellow" class="section-divider" />
+
+    <section v-if="hasManagerAccess && directory.servers.value.length > 0" class="server-grid">
+      <Card
+        v-for="server in directory.servers.value"
+        :key="server.serverId"
+        :color="statusColor(server.status)"
+        class="server-card"
+      >
+        <div class="card-header">
+          <p class="card-status">{{ statusLabel(server.status) }}</p>
+        </div>
+        <h3>
+          <Icon name="icon-map" :size="18" class="card-icon" />
+          {{ server.displayName }}
+        </h3>
+        <p class="card-address">
+          <Tooltip :title="server.publicAddress" placement="top">
+            <span>地址：{{ server.publicAddress }}</span>
+          </Tooltip>
+        </p>
+        <p><Icon name="icon-design" :size="16" class="card-icon" />版本：{{ server.gameVersion }}</p>
+        <p><Icon name="icon-chat" :size="16" class="card-icon" />在线玩家：{{ server.onlinePlayerCount }}</p>
         <div class="card-actions">
           <RouterLink :to="`/servers/${server.serverId}/visitor`" custom v-slot="{ navigate }">
             <Button type="default" @click="navigate">访客视图</Button>
@@ -95,14 +148,13 @@ async function createServer(payload: CreateManagedServerRequest) {
       </Card>
     </section>
 
-    <Card v-else class="auth-card">
-      <h3>管理员登录</h3>
-      <p>
-        使用已绑定管理员账号的验证器动态码登录。登录后即可选择要管理的服务器。
-      </p>
-      <div class="auth-actions">
-        <Button type="primary" @click="openLogin">输入动态码登录</Button>
-      </div>
+    <Card v-else-if="hasManagerAccess" class="empty-state-card">
+      <Typewriter
+        text="还没有受管服务器，点击上方按钮创建第一个吧。"
+        :auto-play="true"
+        :speed="40"
+        class="empty-typewriter"
+      />
     </Card>
 
     <CreateServerModal
@@ -130,6 +182,14 @@ async function createServer(payload: CreateManagedServerRequest) {
   font-weight: 700;
 }
 
+.login-collapse {
+  margin-bottom: 0;
+}
+
+.section-divider {
+  margin: 18px 0;
+}
+
 .server-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -137,7 +197,8 @@ async function createServer(payload: CreateManagedServerRequest) {
 }
 
 .auth-card,
-.server-card {
+.server-card,
+.empty-state-card {
   display: grid;
   gap: 12px;
 }
@@ -149,12 +210,32 @@ async function createServer(payload: CreateManagedServerRequest) {
   margin: 0;
 }
 
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .card-status {
-  color: var(--animal-primary-color);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  margin: 0;
+}
+
+.card-icon {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.card-address span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+  display: inline-block;
+  vertical-align: bottom;
 }
 
 .card-actions {
@@ -166,5 +247,15 @@ async function createServer(payload: CreateManagedServerRequest) {
 .auth-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.empty-state-card {
+  text-align: center;
+  padding: 32px;
+}
+
+.empty-typewriter {
+  font-size: 16px;
+  color: var(--animal-text-color-secondary);
 }
 </style>

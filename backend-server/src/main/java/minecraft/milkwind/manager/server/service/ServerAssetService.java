@@ -2,6 +2,7 @@ package minecraft.milkwind.manager.server.service;
 
 import minecraft.milkwind.manager.common.exception.ApiException;
 import minecraft.milkwind.manager.server.dto.AssetActionResultDto;
+import minecraft.milkwind.manager.server.dto.BatchAssetActionResultDto;
 import minecraft.milkwind.manager.server.dto.ManagedAssetDto;
 import minecraft.milkwind.manager.server.entity.ServerConfigEntity;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,14 @@ public class ServerAssetService {
 
     public AssetActionResultDto resumeAsset(ServerConfigEntity config, String assetId) {
         return moveAsset(config, assetId, true);
+    }
+
+    public BatchAssetActionResultDto suspendAssets(ServerConfigEntity config, List<String> assetIds) {
+        return moveAssets(config, assetIds, false);
+    }
+
+    public BatchAssetActionResultDto resumeAssets(ServerConfigEntity config, List<String> assetIds) {
+        return moveAssets(config, assetIds, true);
     }
 
     private List<ManagedAssetDto> scanAssets(Path baseDirectory, String type) {
@@ -114,6 +123,21 @@ public class ServerAssetService {
                 fileName,
                 baseDirectory.resolve(fileName),
                 baseDirectory.resolve(DISABLED_FOLDER_NAME).resolve(fileName)
+        );
+    }
+
+    private BatchAssetActionResultDto moveAssets(ServerConfigEntity config, List<String> assetIds, boolean enable) {
+        List<AssetActionResultDto> results = assetIds.stream()
+                .map(assetId -> moveAsset(config, assetId, enable))
+                .toList();
+
+        return new BatchAssetActionResultDto(
+                config.getServerId(),
+                enable ? "resume" : "suspend",
+                results.size(),
+                results,
+                "UPDATED",
+                enable ? "Batch asset resume completed" : "Batch asset suspend completed"
         );
     }
 

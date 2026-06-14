@@ -2,6 +2,8 @@ import { computed, ref, type MaybeRefOrGetter, toValue } from 'vue';
 import { apiRequest } from '@/lib/api';
 import type {
   AssetActionRequest,
+  BatchAssetActionRequest,
+  BatchAssetActionResult,
   CreateManagedServerRequest,
   CustomCommand,
   CustomCommandUpsertRequest,
@@ -208,6 +210,24 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
     );
   }
 
+  function suspendAssets(request: BatchAssetActionRequest) {
+    return runBusyAction(() =>
+      apiRequest<BatchAssetActionResult>(`${basePath()}/assets/suspend/batch`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
+  function resumeAssets(request: BatchAssetActionRequest) {
+    return runBusyAction(() =>
+      apiRequest<BatchAssetActionResult>(`${basePath()}/assets/resume/batch`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  }
+
   return {
     snapshot,
     logs,
@@ -235,5 +255,7 @@ export function useServerSnapshot(serverIdSource: MaybeRefOrGetter<string>, mana
     sendMessage,
     suspendAsset,
     resumeAsset,
+    suspendAssets,
+    resumeAssets,
   };
 }

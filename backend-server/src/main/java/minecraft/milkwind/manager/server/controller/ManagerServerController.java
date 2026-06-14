@@ -3,6 +3,8 @@ package minecraft.milkwind.manager.server.controller;
 import minecraft.milkwind.manager.common.api.ApiResponse;
 import minecraft.milkwind.manager.server.dto.AssetActionRequest;
 import minecraft.milkwind.manager.server.dto.AssetActionResultDto;
+import minecraft.milkwind.manager.server.dto.BatchAssetActionRequest;
+import minecraft.milkwind.manager.server.dto.BatchAssetActionResultDto;
 import minecraft.milkwind.manager.server.dto.CreateManagedServerRequest;
 import minecraft.milkwind.manager.server.dto.CreateManagedServerResultDto;
 import minecraft.milkwind.manager.server.dto.ConsoleCommandResultDto;
@@ -91,6 +93,22 @@ public class ManagerServerController {
             @RequestBody AssetActionRequest request
     ) {
         return ApiResponse.success(serverManagementService.resumeAsset(serverId, request));
+    }
+
+    @PostMapping("/{serverId}/assets/suspend/batch")
+    public ApiResponse<BatchAssetActionResultDto> suspendAssets(
+            @PathVariable String serverId,
+            @RequestBody BatchAssetActionRequest request
+    ) {
+        return ApiResponse.success(serverManagementService.suspendAssets(serverId, request));
+    }
+
+    @PostMapping("/{serverId}/assets/resume/batch")
+    public ApiResponse<BatchAssetActionResultDto> resumeAssets(
+            @PathVariable String serverId,
+            @RequestBody BatchAssetActionRequest request
+    ) {
+        return ApiResponse.success(serverManagementService.resumeAssets(serverId, request));
     }
 
     @PostMapping("/{serverId}/players/op")
