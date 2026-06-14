@@ -113,19 +113,9 @@ async function onBatchAssetToggle(payloads: { assetId: string; nextEnabled: bool
       nextEnabled
         ? snapshotState.resumeAssets({ assetIds })
         : snapshotState.suspendAssets({ assetIds }),
-    '鎵归噺璧勬簮鍒囨崲澶辫触銆?',
+    `批量操作资源 ${assetIds.join(', ')} 失败。`,
   );
   return;
-
-  for (const p of payloads) {
-    await guardAction(
-      () =>
-        p.nextEnabled
-          ? snapshotState.resumeAsset({ assetId: p.assetId })
-          : snapshotState.suspendAsset({ assetId: p.assetId }),
-      `批量操作资源 ${p.assetId} 失败。`,
-    );
-  }
 }
 
 async function onUpdateConfig(payload: UpdateServerConfigRequest) {
