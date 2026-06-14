@@ -79,7 +79,7 @@ public class TotpService {
         for (char character : normalized.toCharArray()) {
             int value = decodeBase32Character(character);
             if (value < 0) {
-                throw new IllegalArgumentException("Invalid base32 character");
+                throw new IllegalArgumentException("Base32 字符无效");
             }
 
             buffer = (buffer << 5) | value;

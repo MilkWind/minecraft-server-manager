@@ -56,7 +56,7 @@ public class ServerProcessService {
 
         Path root = Path.of(config.getRootDirectory());
         Path jar = discoverJar(root)
-                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "jar_not_found", "Unable to find a server jar in the root directory"));
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "jar_not_found", "无法在根目录中找到服务器 Jar 文件"));
 
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(root.toFile())
@@ -77,7 +77,7 @@ public class ServerProcessService {
             runtime.clearProcess("STOPPED");
             runtime.clearTransientState();
             serverStatusService.updateStatus(config.getServerId(), "STOPPED");
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "process_start_failed", "Failed to start server process");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "process_start_failed", "启动服务器进程失败");
         }
     }
 
@@ -129,7 +129,7 @@ public class ServerProcessService {
         BufferedWriter writer = runtime.getConsoleWriter();
         Process process = runtime.getProcess();
         if (writer == null || process == null || !process.isAlive()) {
-            throw new ApiException(HttpStatus.CONFLICT, "process_not_running", "Server process is not running");
+            throw new ApiException(HttpStatus.CONFLICT, "process_not_running", "服务器进程未运行");
         }
 
         try {
@@ -137,7 +137,7 @@ public class ServerProcessService {
             writer.newLine();
             writer.flush();
         } catch (IOException exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "command_write_failed", "Failed to write to server console");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "command_write_failed", "写入服务器控制台失败");
         }
     }
 

@@ -159,7 +159,7 @@ public class ApplicationYamlManagerRegistrationStore {
             }
             return new LinkedHashMap<>();
         } catch (IOException exception) {
-            throw new IllegalStateException("Failed to read application.yaml", exception);
+            throw new IllegalStateException("读取 application.yaml 失败", exception);
         }
     }
 
@@ -181,7 +181,7 @@ public class ApplicationYamlManagerRegistrationStore {
                 .map(Path::toAbsolutePath)
                 .filter(Files::exists)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("application.yaml was not found in the backend resources directory"));
+                .orElseThrow(() -> new IllegalStateException("未在后端资源目录中找到 application.yaml"));
     }
 
     private boolean parseBoolean(Object value, boolean fallback) {

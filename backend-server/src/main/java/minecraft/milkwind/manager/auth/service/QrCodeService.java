@@ -27,7 +27,7 @@ public class QrCodeService {
             return "data:image/svg+xml;base64," + Base64.getEncoder()
                     .encodeToString(svg.getBytes(StandardCharsets.UTF_8));
         } catch (WriterException exception) {
-            throw new IllegalStateException("Failed to generate QR code", exception);
+            throw new IllegalStateException("生成二维码失败", exception);
         }
     }
 

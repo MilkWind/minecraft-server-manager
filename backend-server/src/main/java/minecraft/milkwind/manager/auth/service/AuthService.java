@@ -45,7 +45,7 @@ public class AuthService {
 
         ManagerUserEntity user = resolveActiveManagerByTotp(totpCode);
         if (user == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_totp", "Invalid verification code");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_totp", "验证码无效");
         }
 
         revokeExistingSessions(user.getUsername());
@@ -84,7 +84,7 @@ public class AuthService {
         }
 
         if (matches.size() > 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "ambiguous_totp", "Verification code matches multiple managers");
+            throw new ApiException(HttpStatus.CONFLICT, "ambiguous_totp", "验证码匹配到多个管理员");
         }
 
         return matches.isEmpty() ? null : matches.get(0);
@@ -92,18 +92,18 @@ public class AuthService {
 
     public AuthSessionDto currentSession(ManagerSession principal, List<String> allowedServerIds) {
         if (principal == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "unauthenticated", "Manager session is required");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "unauthenticated", "需要管理员会话");
         }
 
         ManagerSessionEntity entity = managerSessionMapper.selectById(principal.token());
         if (entity == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "session_expired", "Manager session has expired");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "session_expired", "管理员会话已过期");
         }
 
         Instant expiresAt = Instant.parse(entity.getExpiresAt());
         if (expiresAt.isBefore(Instant.now())) {
             managerSessionMapper.deleteById(entity.getToken());
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "session_expired", "Manager session has expired");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "session_expired", "管理员会话已过期");
         }
 
         entity.setLastSeenAt(TimeSupport.nowIso());
@@ -160,7 +160,7 @@ public class AuthService {
     private String requireText(String value, String field) {
         String normalized = value == null ? "" : value.trim();
         if (normalized.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_" + field, "Required field is blank: " + field);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_" + field, "必填字段为空：" + field);
         }
         return normalized;
     }

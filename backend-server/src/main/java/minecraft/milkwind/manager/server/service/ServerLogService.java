@@ -70,7 +70,7 @@ public class ServerLogService {
                     .sorted(logFileComparator())
                     .toList();
         } catch (IOException exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "log_scan_failed", "Failed to scan server log files");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "log_scan_failed", "扫描服务器日志文件失败");
         }
     }
 
@@ -115,7 +115,7 @@ public class ServerLogService {
             fileCache.put(cacheKey, new CachedFileLog(fileSize, lastModified.toMillis(), parsedEntries));
             return parsedEntries;
         } catch (IOException exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "log_read_failed", "Failed to read server log files");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "log_read_failed", "读取服务器日志文件失败");
         }
     }
 

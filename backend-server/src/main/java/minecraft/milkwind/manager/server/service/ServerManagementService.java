@@ -81,7 +81,7 @@ public class ServerManagementService {
     public CreateManagedServerResultDto createManagedServer(CreateManagedServerRequest request) {
         String serverId = requireServerId(request.serverId());
         if (serverConfigMapper.selectById(serverId) != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "server_exists", "Target server id already exists");
+            throw new ApiException(HttpStatus.CONFLICT, "server_exists", "目标服务器 ID 已存在");
         }
 
         ServerConfigEntity entity = new ServerConfigEntity();
@@ -222,7 +222,7 @@ public class ServerManagementService {
     private ServerConfigEntity requireServerConfig(String serverId) {
         ServerConfigEntity entity = serverConfigMapper.selectById(serverId);
         if (entity == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "server_not_found", "Target server does not exist");
+            throw new ApiException(HttpStatus.NOT_FOUND, "server_not_found", "目标服务器不存在");
         }
         return entity;
     }
@@ -230,7 +230,7 @@ public class ServerManagementService {
     private CustomCommandEntity requireCommand(String serverId, String commandId) {
         CustomCommandEntity entity = customCommandMapper.selectById(commandId);
         if (entity == null || !serverId.equals(entity.getServerId())) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "command_not_found", "Target command does not exist");
+            throw new ApiException(HttpStatus.NOT_FOUND, "command_not_found", "目标命令不存在");
         }
         return entity;
     }
@@ -238,7 +238,7 @@ public class ServerManagementService {
     private String requireText(String value, String field) {
         String normalized = value == null ? "" : value.trim();
         if (normalized.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_" + field, "Required field is blank: " + field);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_" + field, "必填字段为空：" + field);
         }
         return normalized;
     }
@@ -246,7 +246,7 @@ public class ServerManagementService {
     private String requireServerId(String value) {
         String normalized = requireText(value, "server_id");
         if (!normalized.matches("[a-zA-Z0-9_-]+")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_server_id", "Server id may only contain letters, numbers, underscores, and hyphens");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_server_id", "服务器 ID 只能包含字母、数字、下划线和连字符");
         }
         return normalized;
     }
@@ -257,7 +257,7 @@ public class ServerManagementService {
 
     private List<String> requireAssetIds(BatchAssetActionRequest request) {
         if (request == null || request.assetIds() == null || request.assetIds().isEmpty()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_ids", "Asset ids are required");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_ids", "资源 ID 列表不能为空");
         }
 
         List<String> normalized = new ArrayList<>();

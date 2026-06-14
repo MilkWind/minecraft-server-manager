@@ -94,7 +94,7 @@ public class ServerCatalogService {
             case "start" -> serverProcessService.start(config);
             case "stop" -> serverProcessService.stop(config);
             case "restart" -> serverProcessService.restart(config);
-            default -> throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_power_action", "Unsupported power action");
+            default -> throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_power_action", "不支持的电源操作");
         }
 
         ServerRuntimeState runtime = serverProcessService.snapshotRuntime(config);
@@ -111,7 +111,7 @@ public class ServerCatalogService {
         String normalizedCommand = command == null ? "" : command.trim();
 
         if (normalizedCommand.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "empty_command", "Console command cannot be empty");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "empty_command", "控制台命令不能为空");
         }
 
         ServerRuntimeState runtime = serverProcessService.snapshotRuntime(config);
@@ -131,7 +131,7 @@ public class ServerCatalogService {
     private ServerConfigEntity requireServerConfig(String serverId) {
         ServerConfigEntity entity = serverConfigMapper.selectById(serverId);
         if (entity == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "server_not_found", "Target server does not exist");
+            throw new ApiException(HttpStatus.NOT_FOUND, "server_not_found", "目标服务器不存在");
         }
         return entity;
     }

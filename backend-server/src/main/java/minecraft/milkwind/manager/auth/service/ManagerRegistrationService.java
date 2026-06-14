@@ -56,13 +56,13 @@ public class ManagerRegistrationService {
                 new LambdaQueryWrapper<ManagerUserEntity>().eq(ManagerUserEntity::getUsername, account.username())
         );
         if (user == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "registration_not_found", "The manager registration record does not exist");
+            throw new ApiException(HttpStatus.NOT_FOUND, "registration_not_found", "管理员注册记录不存在");
         }
         if (Boolean.TRUE.equals(user.getActive())) {
             return new ManagerRegistrationResultDto(user.getUsername(), user.getDisplayName(), "管理员账号已经完成绑定。");
         }
         if (!totpService.verify(user.getTotpCode(), totpCode)) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_totp", "Invalid verification code");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_totp", "验证码无效");
         }
 
         user.setDisplayName(account.displayName());
@@ -88,7 +88,7 @@ public class ManagerRegistrationService {
 
         if (existing != null) {
             if (Boolean.TRUE.equals(existing.getActive())) {
-                throw new ApiException(HttpStatus.CONFLICT, "manager_exists", "The manager username is already registered");
+                throw new ApiException(HttpStatus.CONFLICT, "manager_exists", "管理员用户名已注册");
             }
 
             existing.setDisplayName(account.displayName());
@@ -117,14 +117,14 @@ public class ManagerRegistrationService {
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.FORBIDDEN,
                         "registration_route_disabled",
-                        "The manager registration link is disabled or unknown"
+                        "管理员注册链接已禁用或不存在"
                 ));
     }
 
     private String requireText(String value, String field) {
         String normalized = value == null ? "" : value.trim();
         if (normalized.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_" + field, "Required field is blank: " + field);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_" + field, "必填字段为空：" + field);
         }
         return normalized;
     }

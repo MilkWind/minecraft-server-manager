@@ -72,7 +72,7 @@ public class ServerAssetService {
                             enabled
                     )));
         } catch (IOException exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "asset_scan_failed", "Failed to scan server assets");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "asset_scan_failed", "扫描服务器资源失败");
         }
     }
 
@@ -82,14 +82,14 @@ public class ServerAssetService {
         Path target = enable ? location.enabledPath() : location.disabledPath();
 
         if (!Files.exists(source)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "asset_not_found", "Target asset does not exist");
+            throw new ApiException(HttpStatus.NOT_FOUND, "asset_not_found", "目标资源不存在");
         }
 
         try {
             Files.createDirectories(target.getParent());
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "asset_move_failed", "Failed to update asset state");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "asset_move_failed", "更新资源状态失败");
         }
 
         return new AssetActionResultDto(
@@ -105,7 +105,7 @@ public class ServerAssetService {
     private AssetLocation resolveAssetLocation(ServerConfigEntity config, String assetId) {
         String normalized = assetId == null ? "" : assetId.trim();
         if (normalized.isBlank() || !normalized.contains(":")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_id", "Asset id is invalid");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_id", "资源 ID 无效");
         }
 
         String[] segments = normalized.split(":", 2);
@@ -115,7 +115,7 @@ public class ServerAssetService {
         Path baseDirectory = switch (type) {
             case "MOD" -> Path.of(config.getRootDirectory(), "mods");
             case "DATAPACK" -> Path.of(config.getRootDirectory(), "world", "datapacks");
-            default -> throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_type", "Unsupported asset type");
+            default -> throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_asset_type", "不支持的资源类型");
         };
 
         return new AssetLocation(
