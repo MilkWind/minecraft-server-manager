@@ -2,6 +2,8 @@
 
 This folder contains the Nginx reverse proxy configuration required by `design-complete.md`.
 
+For the complete build, upload, launch, update, and troubleshooting workflow, see `deploy/WINDOWS_DEPLOYMENT.md`.
+
 ## Nginx responsibilities
 
 - Public entry point for the application.
@@ -37,7 +39,7 @@ Copy-Item .\deploy\nginx.conf D:\server_tools\nginx-1.30.2\conf\nginx.conf -Forc
 Or run Nginx with the repository config directly:
 
 ```powershell
-D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -c D:\development-projects\personal-projects\minecraft-server-manager\deploy\nginx.conf
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:/server_tools/nginx-1.30.2/ -c D:\development-projects\personal-projects\minecraft-server-manager\deploy\nginx.conf
 ```
 
 Start the backend before Nginx:
@@ -46,12 +48,22 @@ Start the backend before Nginx:
 java -jar D:\minecraft-server-manager\backend\manager-0.0.1-SNAPSHOT.jar
 ```
 
+## One-click startup
+
+Double-click this file to start both the backend jar and Nginx:
+
+```text
+deploy\start-minecraft-manager.bat
+```
+
+The script validates the Nginx configuration first, starts the backend from `D:\minecraft-server-manager\backend`, then starts Nginx. If port `8080` is already in use, it skips backend startup. If `nginx.exe` is already running, it reloads the Nginx configuration instead of launching a second instance.
+
 Start, reload, and stop Nginx:
 
 ```powershell
-D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -c D:\server_tools\nginx-1.30.2\conf\nginx.conf
-D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -s reload
-D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -s stop
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:/server_tools/nginx-1.30.2/ -c D:\server_tools\nginx-1.30.2\conf\nginx.conf
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:/server_tools/nginx-1.30.2/ -s reload
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:/server_tools/nginx-1.30.2/ -s stop
 ```
 
 Use the commented TLS server block in `deploy/nginx.conf` when a real domain and certificate files are available.

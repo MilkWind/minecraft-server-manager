@@ -21,7 +21,8 @@ public class ApplicationYamlManagerRegistrationStore {
 
     private static final List<Path> CANDIDATE_PATHS = List.of(
             Path.of("src", "main", "resources", "application.yaml"),
-            Path.of("backend-server", "src", "main", "resources", "application.yaml")
+            Path.of("backend-server", "src", "main", "resources", "application.yaml"),
+            Path.of("resources", "application.yaml")
     );
 
     private final Object lock = new Object();
