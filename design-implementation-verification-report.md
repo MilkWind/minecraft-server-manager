@@ -19,7 +19,7 @@ Assessment method:
 
 Estimated decision-adjusted overall matching degree: `98%`
 
-This is an engineering estimate, not a formal compliance score. The remaining known non-decision gap is HTTPS-only deployment enforcement in the sample Caddy configuration.
+This is an engineering estimate, not a formal compliance score. The remaining known non-decision gap is HTTPS-only deployment enforcement in the sample Nginx configuration.
 
 ## 2. Build and validation status
 
@@ -50,7 +50,7 @@ This is an engineering estimate, not a formal compliance score. The remaining kn
 | Manage multiple Minecraft servers from one web application | FULL | 100% | Multiple servers are modeled in `server_config`, routed by `serverId`, listed by `ServerCatalogService`, and rendered in frontend server pages. |
 | Expose safe public information to visitors | FULL | 100% | Public APIs are under `/api/public/**`; public snapshots exclude root directory, JVM args, custom commands, and full logs. |
 | Expose administrative controls only to authenticated managers | FULL | 100% | Manager APIs require authentication through Spring Security and `ManagerAuthenticationFilter`. |
-| Keep deployment simple and low-cost | FULL | 100% | Single frontend, single backend, SQLite, polling, local Caddy reverse proxy config. |
+| Keep deployment simple and low-cost | FULL | 100% | Single frontend, single backend, SQLite, polling, local Nginx reverse proxy config. |
 | Use a design suitable for a small number of servers and viewers | FULL | 100% | Implementation is intentionally lightweight and not multi-tenant. |
 
 ### 4.2 Visitor goals
@@ -144,9 +144,9 @@ This is an engineering estimate, not a formal compliance score. The remaining kn
 | Managers specify server root directory when adding a server | FULL | 100% | Supported by server creation form and API. |
 | JVM parameters are applied when launching the process | FULL | 100% | `buildCommand()` prepends configured JVM args to the Java command. |
 | REST with polling is used instead of WebSocket/SSE | FULL | 100% | The implementation is REST polling only. |
-| Reverse proxy uses Caddy | FULL | 100% | `deploy/Caddyfile` and `deploy/README.md` are present. |
-| HTTPS termination is supported | FULL | 100% | Caddy deployment guidance expects HTTPS termination. |
-| Serve application only over HTTPS | PARTIAL | 50% | Deployment guidance recommends HTTPS, but the provided Caddyfile defaults to `localhost` and does not itself enforce a production-only HTTPS deployment rule. |
+| Reverse proxy uses Nginx | FULL | 100% | `deploy/nginx.conf` and `deploy/README.md` are present. |
+| HTTPS termination is supported | FULL | 100% | Nginx deployment guidance includes a TLS-enabled server block. |
+| Serve application only over HTTPS | PARTIAL | 50% | Deployment guidance includes HTTPS, but the sample Nginx config keeps the TLS block commented until real certificates are available. |
 | Code comments and annotations use English | FULL | 100% | Current backend code and frontend source comments follow this convention. |
 | UI text uses Chinese | FULL | 100% | Verified frontend-owned Vue titles, subtitles, placeholders, buttons, modal copy, and seeded custom command labels/descriptions. Technical abbreviations such as `JVM`, `TOTP`, `QR`, and `OP` are intentionally retained. |
 
@@ -177,7 +177,7 @@ This is an engineering estimate, not a formal compliance score. The remaining kn
 ### Remaining non-decision risk
 
 1. HTTPS-only serving is still a deployment-policy gap.
-   - The deployment docs support Caddy HTTPS termination, but the sample `deploy/Caddyfile` is still localhost-oriented and does not enforce a production-only HTTPS site address.
+   - The deployment docs support Nginx HTTPS termination, but the sample `deploy/nginx.conf` keeps the TLS block commented until real certificates are available.
 
 ## 6. Final conclusion
 

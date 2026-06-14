@@ -57,7 +57,7 @@ These items are implemented in code but still need build/test/manual verificatio
 - Asset suspend/resume behavior on a live server
 - Log parsing and player detection against live output
 - TOTP login verification
-- Reverse proxy and deployment validation
+- Reverse proxy and deployment validation with Nginx
 
 Verified in this pass:
 
@@ -80,7 +80,7 @@ Still pending:
 - Asset suspend/resume behavior on a live server
 - Log parsing and player detection against live output
 - Logout/token-revocation verification with a fresh TOTP
-- Reverse proxy and deployment validation
+- Reverse proxy and deployment validation with Nginx
 
 ## Still Unfinished
 
@@ -93,4 +93,4 @@ The following work is still not fully verified or may need follow-up changes aft
 
 1. Perform browser smoke tests.
 2. Validate Minecraft runtime behavior against a live server.
-3. Verify reverse proxy and deployment behavior.
+3. Verify Nginx reverse proxy and deployment behavior.

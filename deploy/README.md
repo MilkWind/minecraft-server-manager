@@ -1,37 +1,73 @@
 # Deployment
 
-This folder contains the Caddy reverse proxy configuration required by `design-complete.md`.
+This folder contains the Nginx reverse proxy configuration required by `design-complete.md`.
 
-## Caddy responsibilities
+## Nginx responsibilities
 
 - Public entry point for the application.
-- Forward `/api/*` requests to the Spring Boot backend.
-- Forward all other requests to the Vue frontend instance.
-- Terminate HTTPS for the public site address.
+- Serve the built Vue frontend from `D:\minecraft-server-manager\frondend\dist`.
+- Forward `/api/*` requests to the Spring Boot backend on `127.0.0.1:8080`.
+- Support Vue Router history fallback through `try_files`.
+- Terminate HTTPS for the public site address when TLS certificates are configured.
+
+## Windows layout
+
+The default configuration matches this deployment layout:
+
+```text
+D:\minecraft-server-manager\
+  backend\manager-0.0.1-SNAPSHOT.jar
+  frondend\dist\index.html
+
+D:\server_tools\
+  nginx-1.30.2\nginx.exe
+  nginx-1.30.2\conf\nginx.conf
+```
+
+The folder name `frondend` is intentionally used because it matches the current Windows deployment path. If the deployment folder is renamed to `frontend`, update the `root` directive in `deploy/nginx.conf`.
 
 ## Configuration
 
-The default `Caddyfile` is local-friendly and can be overridden with environment variables:
+Copy the repository config into the Nginx install:
 
 ```powershell
-$env:APP_SITE_ADDRESS = "minecraft.example.com"
-$env:FRONTEND_UPSTREAM = "127.0.0.1:4173"
-$env:BACKEND_UPSTREAM = "127.0.0.1:8080"
-caddy run --config deploy/Caddyfile
+Copy-Item .\deploy\nginx.conf D:\server_tools\nginx-1.30.2\conf\nginx.conf -Force
 ```
 
-Use a real domain for `APP_SITE_ADDRESS` in production so Caddy can manage HTTPS certificates.
+Or run Nginx with the repository config directly:
+
+```powershell
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -c D:\development-projects\personal-projects\minecraft-server-manager\deploy\nginx.conf
+```
+
+Start the backend before Nginx:
+
+```powershell
+java -jar D:\minecraft-server-manager\backend\manager-0.0.1-SNAPSHOT.jar
+```
+
+Start, reload, and stop Nginx:
+
+```powershell
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -c D:\server_tools\nginx-1.30.2\conf\nginx.conf
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -s reload
+D:\server_tools\nginx-1.30.2\nginx.exe -p D:\server_tools\nginx-1.30.2\ -s stop
+```
+
+Use the commented TLS server block in `deploy/nginx.conf` when a real domain and certificate files are available.
 
 ## Validation
 
 Run the validation helper before deployment:
 
 ```powershell
-.\deploy\validate-caddy.ps1
+.\deploy\validate-nginx.ps1
 ```
 
-The script validates the Caddyfile syntax with `caddy validate`. Runtime smoke checks should still verify:
+The script validates `deploy/nginx.conf` with `nginx.exe -t`. Runtime smoke checks should still verify:
 
-- `https://<host>/` loads the frontend.
-- `https://<host>/api/public/servers` reaches the backend.
+- `http://<host>/` loads the frontend.
+- `http://<host>/api/public/servers` reaches the backend.
+- Deep Vue routes such as `http://<host>/servers/MilkWind/visitor` load through the SPA fallback.
 - Manager APIs require authentication through the reverse proxy.
+- If TLS is enabled, `https://<host>/` and `https://<host>/api/public/servers` also work.

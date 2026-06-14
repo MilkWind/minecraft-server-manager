@@ -62,7 +62,7 @@ All managers are trusted operators and can manage all servers.
 
 The frontend and backend are separated.
 
-- Reverse proxy: Caddy
+- Reverse proxy: Nginx
 - Frontend: Vue
 - Frontend routing: Vue Router
 - Frontend UI library: `animal-island-vue`
@@ -312,7 +312,7 @@ State-changing manager APIs include:
 
 ## 17. Reverse Proxy and Deployment
 
-Caddy handles reverse proxy responsibilities.
+Nginx handles reverse proxy responsibilities on Windows.
 
 Expected responsibilities include:
 
